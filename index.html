@@ -6,7 +6,7 @@
     <title>AI Attendance Calculator</title>
     <style>
         :root {
-            --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #1c1e21; --primary-color: #1877f2;
+            --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #1c1e21; --primary-color: #187т7f2;
             --border-color: #dddfe2; --danger-color: #fa383e; --warning-color: #f5a623; --safe-color: #34c759;
             --shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
@@ -153,19 +153,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const holidayDateInput = document.getElementById('holiday-date');
     const addHolidayBtn = document.getElementById('add-holiday-btn');
     const holidaysList = document.getElementById('holidays-list');
-    // Get reference to the new goal percentage input
     const goalPercentageInput = document.getElementById('goal-percentage');
     
     let settings = {};
     let uploadedFile = null;
 
+    // --- NEW: TIMETABLE USES AN ARRAY TO COUNT MULTIPLE HOURS ---
     const FIXED_TIMETABLE = {
-        'Monday': 'ADVANCED PYTHON, CLOUD COMPUTING',
-        'Tuesday': 'MINI PROJECT, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING, CYBER SECURITY, CLOUD COMPUTING',
-        'Wednesday': 'CLOUD COMPUTING, ADVANCED PYTHON, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING',
-        'Thursday': 'ARTIFICIAL INTELLIGENCE & MACHINE LEARNING, CYBER SECURITY, ADVANCED PYTHON',
-        'Friday': 'CLOUD COMPUTING, ADVANCED PYTHON, CYBER SECURITY, MINI PROJECT',
-        'Saturday': 'CYBER SECURITY, MINI PROJECT, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING'
+        'Monday':    ['ADVANCED PYTHON', 'CLOUD COMPUTING', 'PEER LEARNING', 'ELECTIVES', 'ELECTIVES'],
+        'Tuesday':   ['MINI PROJECT', 'ARTIFICIAL INTELLIGENCE & MACHINE LEARNING', 'PEER LEARNING', 'CYBER SECURITY', 'ELECTIVES', 'CLOUD COMPUTING'],
+        'Wednesday': ['CLOUD COMPUTING', 'CLOUD COMPUTING', 'ELECTIVES', 'ADVANCED PYTHON', 'ARTIFICIAL INTELLIGENCE & MACHINE LEARNING'],
+        'Thursday':  ['ARTIFICIAL INTELLIGENCE & MACHINE LEARNING', 'ARTIFICIAL INTELLIGENCE & MACHINE LEARNING', 'ELECTIVES', 'CYBER SECURITY', 'ADVANCED PYTHON'],
+        'Friday':    ['CLOUD COMPUTING', 'ADVANCED PYTHON', 'ADVANCED PYTHON', 'CYBER SECURITY', 'MINI PROJECT', 'MINI PROJECT'],
+        'Saturday':  ['CYBER SECURITY', 'CYBER SECURITY', 'MINI PROJECT', 'ARTIFICIAL INTELLIGENCE & MACHINE LEARNING']
     };
 
     const showHomePage = () => {
@@ -182,19 +182,31 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsPage.classList.remove('hidden');
     };
 
+    // --- NEW: LOGIC UPDATED TO COUNT ALL OCCURRENCES IN THE ARRAY ---
     const findDateForNthClass = (subjectName, neededClasses) => {
         if (!settings.endDate || !subjectName || neededClasses <= 0) return { date: null, days: Infinity };
         let classCount = 0, daysCount = 0;
         const today = new Date();
         const endDate = new Date(settings.endDate);
         const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
+        
         for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
             daysCount++;
             if (holidays.includes(d.toDateString())) continue;
+
             const dayName = d.toLocaleString('en-US', { weekday: 'long' });
-            const timetableEntry = FIXED_TIMETABLE[dayName] || '';
-            if (timetableEntry.toUpperCase().includes(subjectName.toUpperCase())) classCount++;
-            if (classCount >= neededClasses) return { date: d, days: daysCount };
+            const classesToday = FIXED_TIMETABLE[dayName] || [];
+
+            // Loop through the array for the day and count matching subjects
+            for (const subject of classesToday) {
+                if (subject.toUpperCase() === subjectName.toUpperCase()) {
+                    classCount++;
+                }
+            }
+
+            if (classCount >= neededClasses) {
+                return { date: d, days: daysCount };
+            }
         }
         return { date: null, days: Infinity };
     };
@@ -203,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
         const subjectName = card.querySelector('.subject-name-input').value;
-        // Use the goal from settings, with a fallback to 75
         const goalPercentage = settings.goalPercentage || 75;
 
         if (total <= 0) {
@@ -274,15 +285,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const saveSettings = () => {
         const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
-        // Read goal percentage from the input
         const goalPercentage = parseInt(goalPercentageInput.value, 10) || 75;
-        
         settings = { 
             endDate: endDateInput.value, 
             holidays: holidays,
-            goalPercentage: goalPercentage // Save the goal
+            goalPercentage: goalPercentage
         };
-        // Save only the necessary parts to localStorage
         localStorage.setItem('attendanceSettings', JSON.stringify(settings));
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
@@ -291,8 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadSettings = () => {
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
         settings = savedSettings || { holidays: [], goalPercentage: 75 };
-        
-        // Set the value of the input fields from loaded settings
         goalPercentageInput.value = settings.goalPercentage || 75;
         endDateInput.value = settings.endDate || '';
         holidaysList.innerHTML = '';
