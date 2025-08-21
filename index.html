@@ -91,8 +91,7 @@
         </div>
     </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
+<script>document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const subjectsContainer = document.getElementById('subjects-container');
     const addSubjectBtn = document.getElementById('add-subject-btn');
@@ -113,7 +112,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const TARGET_PERCENTAGE = 75;
     let settings = {};
 
-    // --- Core Calculation & Projection Logic ---
+    // --- NEW HELPER FUNCTION TO FIND THE DATE ---
+    const findDateForNthClass = (subjectName, neededClasses) => {
+        if (!settings.endDate || !settings.timetable || !subjectName || neededClasses <= 0) {
+            return { date: null, days: Infinity };
+        }
+        
+        let classCount = 0;
+        let daysCount = 0;
+        const today = new Date();
+        const endDate = new Date(settings.endDate);
+        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
+
+        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+            daysCount++;
+            if (holidays.includes(d.toDateString())) continue;
+
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+            const timetableEntry = settings.timetable[dayName] || '';
+
+            if (timetableEntry.toLowerCase().includes(subjectName.toLowerCase())) {
+                classCount++;
+            }
+
+            if (classCount >= neededClasses) {
+                return { date: d, days: daysCount };
+            }
+        }
+        
+        return { date: null, days: Infinity };
+    };
+
+    const projectFutureClasses = (subjectName) => {
+        if (!settings.endDate || !settings.timetable || !subjectName) return { futureClasses: 0 };
+        
+        let futureClasses = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = new Date(settings.endDate);
+        
+        const holidays = (settings.holidays || []).map(h => new Date(h).toDateString());
+
+        for (let d = today; d <= endDate; d.setDate(d.getDate() + 1)) {
+            if (holidays.includes(d.toDateString())) continue;
+
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+            if (settings.timetable[dayName]?.toLowerCase().includes(subjectName.toLowerCase())) {
+                futureClasses++;
+            }
+        }
+        return { futureClasses };
+    };
+
+    // --- UPDATED MAIN CALCULATION FUNCTION ---
     const calculateAttendance = (card) => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
@@ -135,21 +186,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const neededHrs = Math.ceil(((TARGET_PERCENTAGE / 100) * total - attended) / (1 - (TARGET_PERCENTAGE / 100)));
             
-            // Use our new function to get the date projection
             const projection = findDateForNthClass(subjectName, neededHrs);
 
             if (projection.date) {
-                // Format the date like "Thu Sep 11 2025"
                 const formattedDate = projection.date.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
+                    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' 
                 });
                 status = `Need ${neededHrs} more hrs → will reach 75% in ~${projection.days} day(s), around ${formattedDate}`;
                 className = 'status-warning';
             } else {
-                status = `Need ${neededHrs} more hrs, but it's not possible to reach 75% by the semester end date.`;
+                // This is the fallback message if settings are incomplete or it's impossible
+                status = `Need to attend ${neededHrs} more classes.`;
                 className = 'status-danger';
             }
         }
@@ -158,65 +205,8 @@ document.addEventListener('DOMContentLoaded', () => {
         saveData();
     };
 
-    const projectFutureClasses = (subjectName) => {
-        if (!settings.endDate || !settings.timetable || !subjectName) return { futureClasses: 0 };
-        
-        let futureClasses = 0;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Normalize to start of day
-        const endDate = new Date(settings.endDate);
-        
-        const holidays = (settings.holidays || []).map(h => new Date(h).toDateString());
-
-        for (let d = today; d <= endDate; d.setDate(d.getDate() + 1)) {
-            if (holidays.includes(d.toDateString())) continue;
-
-            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
-            if (settings.timetable[dayName]?.toLowerCase().includes(subjectName.toLowerCase())) {
-                futureClasses++;
-            }
-        }
-        return { futureClasses };
-    };
-
-    const findDateForNthClass = (subjectName, neededClasses) => {
-        if (!settings.endDate || !settings.timetable || !subjectName || neededClasses <= 0) {
-            return { date: null, days: Infinity };
-        }
-        
-        let classCount = 0;
-        let daysCount = 0;
-        const today = new Date();
-        const endDate = new Date(settings.endDate);
-        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
-
-        // Loop one day at a time from today until the semester ends
-        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-            daysCount++;
-            // Skip if it's a holiday
-            if (holidays.includes(d.toDateString())) continue;
-
-            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
-            const timetableEntry = settings.timetable[dayName] || '';
-
-            // Check if the subject is in the timetable for this day
-            if (timetableEntry.toLowerCase().includes(subjectName.toLowerCase())) {
-                classCount++;
-            }
-
-            // If we have attended the needed number of classes, we're done
-            if (classCount >= neededClasses) {
-                return { date: d, days: daysCount };
-            }
-        }
-        
-        // If the loop finishes, it's not possible to attend enough classes
-        return { date: null, days: Infinity };
-    };
-
-    // --- UI Update & DOM Manipulation ---
     const updateCardUI = (card, result) => {
-        card.className = 'subject-card'; // Reset
+        card.className = 'subject-card';
         if (result.className) card.classList.add(result.className);
         
         const resultDisplay = card.querySelector('.result-display');
@@ -262,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
         subjectsData.forEach(createSubjectCard);
     };
 
-    // --- Data Persistence (localStorage) ---
     const saveData = () => {
         const subjects = Array.from(document.querySelectorAll('.subject-card')).map(card => ({
             name: card.querySelector('.subject-name-input').value,
@@ -293,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         localStorage.setItem('attendanceSettings', JSON.stringify(settings));
         settingsModal.style.display = 'none';
-        // Recalculate all cards with new settings
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
     };
 
@@ -302,8 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedSettings) {
             settings = savedSettings;
             endDateInput.value = settings.endDate || '';
-            
-            // Populate timetable and holidays
             const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             timetableGrid.innerHTML = '';
             days.forEach(day => {
@@ -313,11 +299,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="text" data-day="${day}" placeholder="Subjects..." value="${settings.timetable?.[day] || ''}">
                     </div>`;
             });
-            
             holidaysList.innerHTML = '';
             (settings.holidays || []).forEach(addHolidayToList);
         } else {
-            // If no settings, create empty timetable
             loadSettings(); 
         }
     };
@@ -326,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!date) return;
         const li = document.createElement('li');
         li.dataset.date = date;
-        li.textContent = new Date(date + 'T00:00:00').toDateString(); // Fix timezone issue
+        li.textContent = new Date(date + 'T00:00:00').toDateString();
         const removeHolidayBtn = document.createElement('button');
         removeHolidayBtn.textContent = 'x';
         removeHolidayBtn.style.marginLeft = '10px';
@@ -335,53 +319,39 @@ document.addEventListener('DOMContentLoaded', () => {
         holidaysList.appendChild(li);
     };
 
-    // --- Gemini API Call ---
     const handleFileUpload = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
-
         loadingOverlay.style.display = 'flex';
-        
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = async () => {
             const base64Image = reader.result.split(',')[1];
             try {
-                // IMPORTANT: This calls your serverless function
                 const response = await fetch('/api/analyze-attendance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image: base64Image,
-                        mimeType: file.type
-                    })
+                    body: JSON.stringify({ image: base64Image, mimeType: file.type })
                 });
-
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.statusText}`);
-                }
-
+                if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
                 const data = await response.json();
                 populateAllCards(data);
                 saveData();
-
             } catch (error) {
                 console.error("Error analyzing screenshot:", error);
                 alert("Could not analyze screenshot. Please check the format or try again.");
             } finally {
                 loadingOverlay.style.display = 'none';
-                event.target.value = ''; // Reset file input
+                event.target.value = '';
             }
         };
     };
 
-    // --- Event Listeners ---
     addSubjectBtn.addEventListener('click', () => createSubjectCard());
     uploadInput.addEventListener('change', handleFileUpload);
     
-    // Settings Modal Listeners
     settingsBtn.addEventListener('click', () => {
-        loadSettings(); // Reload settings every time modal is opened
+        loadSettings();
         settingsModal.style.display = 'block';
     });
     closeModal.addEventListener('click', () => settingsModal.style.display = 'none');
@@ -392,10 +362,10 @@ document.addEventListener('DOMContentLoaded', () => {
         holidayDateInput.value = '';
     });
 
-    // --- Initial Load ---
     loadSettings();
     loadData();
 });
 </script>
 </body>
 </html>
+
