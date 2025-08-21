@@ -208,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let uploadedTimetableFile = null;
     let uploadedAttendanceFile = null;
     
-    // --- Page Navigation & State ---
     const showHomePage = () => {
         resultsPage.classList.add('hidden');
         homePage.classList.remove('hidden');
@@ -231,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeBtn.disabled = !(uploadedTimetableFile && uploadedAttendanceFile);
     };
     
-    // --- Bunk Planner Calculation ---
     const calculateBunkPlanner = () => {
         bunkContainer.innerHTML = '';
         const subjectCards = document.querySelectorAll('.subject-card');
@@ -241,8 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
             bunkContainer.innerHTML = '<p style="text-align:center; color:#606770;">No subjects to plan.</p>';
             return;
         }
-
-        // First, calculate the total aggregate buffer
         let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
         subjectCards.forEach(card => {
             totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
@@ -250,43 +246,21 @@ document.addEventListener('DOMContentLoaded', () => {
             totalFutureClasses += countFutureClasses(card.querySelector('.subject-name-input').value);
         });
         const aggregateBuffer = Math.floor((totalAttended - (aggregateGoalPercentage / 100) * totalHeld) + totalFutureClasses * (1 - (aggregateGoalPercentage / 100)));
-
-        // Then, display for each subject
         subjectCards.forEach(card => {
             const subjectName = card.querySelector('.subject-name-input').value;
             const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
             const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
             const futureClasses = countFutureClasses(subjectName);
             const perSubjectBuffer = Math.floor((attended - (goalPercentage / 100) * total) + futureClasses * (1 - (goalPercentage / 100)));
-            
             const bunkCard = document.createElement('div');
             bunkCard.className = 'bunk-card';
-            
-            const subjectBufferText = (perSubjectBuffer >= 0) 
-                ? `<span style="color: var(--safe-color);">${perSubjectBuffer} hr(s)</span>`
-                : `<span style="color: var(--danger-color);">None</span>`;
-            
-            const aggregateBufferText = (aggregateBuffer >= 0)
-                ? `<span style="color: var(--safe-color);">${aggregateBuffer} hr(s) (from any subject)</span>`
-                : `<span style="color: var(--danger-color);">None</span>`;
-
-            bunkCard.innerHTML = `
-                <div class="bunk-card-subject">${subjectName}</div>
-                <div class="bunk-card-details">
-                    <div class="bunk-detail">
-                        <span>For Subject Goal (${goalPercentage}%):</span>
-                        <span>${subjectBufferText}</span>
-                    </div>
-                    <div class="bunk-detail">
-                        <span>For Aggregate Goal (${aggregateGoalPercentage}%):</span>
-                        <span>${aggregateBufferText}</span>
-                    </div>
-                </div>`;
+            const subjectBufferText = (perSubjectBuffer >= 0) ? `<span style="color: var(--safe-color);">${perSubjectBuffer} hr(s)</span>` : `<span style="color: var(--danger-color);">None</span>`;
+            const aggregateBufferText = (aggregateBuffer >= 0) ? `<span style="color: var(--safe-color);">${aggregateBuffer} hr(s) (from any subject)</span>` : `<span style="color: var(--danger-color);">None</span>`;
+            bunkCard.innerHTML = `<div class="bunk-card-subject">${subjectName}</div><div class="bunk-card-details"><div class="bunk-detail"><span>For Subject Goal (${goalPercentage}%):</span><span>${subjectBufferText}</span></div><div class="bunk-detail"><span>For Aggregate Goal (${aggregateGoalPercentage}%):</span><span>${aggregateBufferText}</span></div></div>`;
             bunkContainer.appendChild(bunkCard);
         });
     };
 
-    // --- Core Calculation Logic ---
     const countFutureClasses = (subjectName) => {
         if (!settings.endDate || !settings.timetable || !subjectName) return 0;
         let classCount = 0;
@@ -303,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return classCount;
     };
-
     const calculateAggregateAttendance = () => {
         let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
         const subjectCards = document.querySelectorAll('.subject-card');
@@ -339,14 +312,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateAggregateUI({ percentage: currentAggregatePercentage, status, className });
     };
-
     const updateAggregateUI = (result) => {
         aggregateSummary.className = '';
         if (result.className) aggregateSummary.classList.add(result.className);
         aggregatePercentageDisplay.textContent = `${result.percentage.toFixed(2)}%`;
         aggregateStatusDisplay.textContent = result.status;
     };
-
     const calculateAttendance = (card) => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
@@ -383,7 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveData();
         calculateAggregateAttendance();
     };
-
     const updateCardUI = (card, result) => {
         card.className = 'subject-card';
         if (result.className) card.classList.add(result.className);
@@ -393,14 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const createSubjectCard = (data = { name: '', attended: '', total: '' }) => {
         const card = document.createElement('div');
         card.className = 'subject-card';
-        card.innerHTML = `
-            <button class="remove-btn">&times;</button>
-            <div class="subject-grid">
-                <div class="input-group"><label>Subject Name</label><input type="text" class="subject-name-input" value="${data.name}"></div>
-                <div class="input-group"><label>Attended</label><input type="number" class="attended-input" min="0" value="${data.attended}"></div>
-                <div class="input-group"><label>Total Held</label><input type="number" class="total-input" min="0" value="${data.total}"></div>
-            </div>
-            <div class="result-display"><div class="status-message">Enter values to calculate.</div></div>`;
+        card.innerHTML = `<button class="remove-btn">&times;</button><div class="subject-grid"><div class="input-group"><label>Subject Name</label><input type="text" class="subject-name-input" value="${data.name}"></div><div class="input-group"><label>Attended</label><input type="number" class="attended-input" min="0" value="${data.attended}"></div><div class="input-group"><label>Total Held</label><input type="number" class="total-input" min="0" value="${data.total}"></div></div><div class="result-display"><div class="status-message">Enter values to calculate.</div></div>`;
         card.addEventListener('input', () => calculateAttendance(card));
         card.querySelector('.remove-btn').addEventListener('click', () => { card.remove(); saveData(); calculateAggregateAttendance(); });
         subjectsContainer.appendChild(card);
@@ -452,25 +415,29 @@ document.addEventListener('DOMContentLoaded', () => {
         li.appendChild(removeHolidayBtn);
         holidaysList.appendChild(li);
     };
+    
+    // --- UPDATED Analysis and Error Handling ---
     const handleAnalysis = async () => {
         if (!uploadedTimetableFile || !uploadedAttendanceFile) return;
         loadingOverlay.style.display = 'flex';
         try {
-            const timetableData = await analyzeImage(uploadedTimetableFile, '/api/analyze-timetable');
+            const timetableData = await analyzeImage(uploadedTimetableFile, '/api/analyze-timetable', 'Timetable');
             settings.timetable = timetableData;
             localStorage.setItem('attendanceSettings', JSON.stringify(settings));
-            const attendanceData = await analyzeImage(uploadedAttendanceFile, '/api/analyze-attendance');
+            
+            const attendanceData = await analyzeImage(uploadedAttendanceFile, '/api/analyze-attendance', 'Attendance');
             populateAllCards(attendanceData);
             saveData();
             showResultsPage();
         } catch (error) {
-            alert("An error occurred during analysis. Please check your screenshots and try again.");
+            alert(error.message); // Show the specific error message
             console.error("Analysis failed:", error);
         } finally {
             loadingOverlay.style.display = 'none';
         }
     };
-    const analyzeImage = (file, endpoint) => {
+    
+    const analyzeImage = (file, endpoint, type) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -482,14 +449,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ image: base64Image, mimeType: file.type })
                     });
-                    if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(`${type} analysis failed: ${err.details || err.error}`);
+                    }
                     const data = await response.json();
                     resolve(data);
                 } catch (error) { reject(error); }
             };
-            reader.onerror = reject;
+            reader.onerror = (error) => reject(new Error("Failed to read the file."));
         });
     };
+    
     const handleTimetableFile = (file) => {
         uploadedTimetableFile = file;
         timetableUploadInput.value = '';
@@ -507,9 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tabs.forEach(item => item.classList.remove('active'));
             tab.classList.add('active');
             const targetId = tab.dataset.tab + '-content';
-            tabContents.forEach(content => {
-                content.classList.toggle('active', content.id === targetId);
-            });
+            tabContents.forEach(content => { content.classList.toggle('active', content.id === targetId); });
             if (tab.dataset.tab === 'bunk') {
                 calculateBunkPlanner();
             }
