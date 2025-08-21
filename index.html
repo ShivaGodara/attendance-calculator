@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Attendance Calculator</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #1c1e21; --primary-color: #1877f2;
+            --border-color: #dddfe2; --danger-color: #fa383e; --warning-color: #f5a623; --safe-color: #34c759;
+            --shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 24px; }
+        header h1 { color: var(--primary-color); margin-bottom: 8px; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .control-btn { background-color: var(--card-bg); color: var(--primary-color); border: 1px solid var(--primary-color); padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; text-align: center; transition: all 0.2s; }
+        .control-btn:hover { background-color: var(--primary-color); color: white; }
+        .control-btn input[type="file"] { display: none; }
+        .subject-card { background-color: var(--card-bg); border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border-left: 5px solid var(--border-color); transition: border-left 0.3s; }
+        .subject-card.status-safe { border-left-color: var(--safe-color); }
+        .subject-card.status-warning { border-left-color: var(--warning-color); }
+        .subject-card.status-danger { border-left-color: var(--danger-color); }
+        .subject-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; align-items: flex-end; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 0.8em; margin-bottom: 4px; font-weight: 500; color: #606770; }
+        .input-group input { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em; width: 100%; box-sizing: border-box; }
+        .result-display { text-align: center; padding: 10px; border-radius: 6px; margin-top: 16px; }
+        .result-display .percentage { font-size: 1.5em; font-weight: 700; }
+        .result-display .status-message { font-size: 0.9em; margin-top: 4px; }
+        .status-safe .result-display { background-color: #eaf6ec; color: var(--safe-color); }
+        .status-warning .result-display { background-color: #fff8e1; color: #b79000; }
+        .status-danger .result-display { background-color: #fdecea; color: var(--danger-color); }
+        .remove-btn { color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 8px; font-size: 0.9em; float: right; }
+        .add-subject-btn { width: 100%; }
+        #settings-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
+        .modal-content h2 { margin-top: 0; }
+        #timetable-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        #holidays-list { list-style-type: none; padding: 0; }
+        #loading-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); justify-content: center; align-items: center; text-align: center; }
+        .spinner { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media (max-width: 600px) { .subject-grid { grid-template-columns: 1fr; } .controls-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div>
+            <div class="spinner"></div>
+            <p>Analyzing screenshot...</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>AI Attendance Calculator</h1>
+            <p>Calculate current attendance and project your future status.</p>
+        </header>
+
+        <div class="controls-grid">
+            <label for="screenshot-upload" class="control-btn">📷 Upload Screenshot</label>
+            <input type="file" id="screenshot-upload" accept="image/*">
+            <button id="settings-btn" class="control-btn">⚙️ Settings</button>
+        </div>
+
+        <div id="subjects-container"></div>
+        <button id="add-subject-btn" class="control-btn add-subject-btn">➕ Add Subject Manually</button>
+    </div>
+
+    <div id="settings-modal">
+        <div class="modal-content">
+            <span class="close" style="float:right; cursor:pointer;">&times;</span>
+            <h2>Settings</h2>
+            <div class="input-group">
+                <label for="end-date">Semester End Date</label>
+                <input type="date" id="end-date">
+            </div>
+            <h3 style="margin-top: 20px;">Weekly Timetable</h3>
+            <div id="timetable-grid">
+                </div>
+            <h3 style="margin-top: 20px;">Holidays</h3>
+            <div class="input-group" style="display:flex; flex-direction: row; gap: 10px;">
+                <input type="date" id="holiday-date" style="flex-grow: 1;">
+                <button id="add-holiday-btn">Add Holiday</button>
+            </div>
+            <ul id="holidays-list"></ul>
+            <button id="save-settings-btn" class="control-btn" style="width: 100%; margin-top: 20px;">Save Settings</button>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const subjectsContainer = document.getElementById('subjects-container');
+    const addSubjectBtn = document.getElementById('add-subject-btn');
+    const uploadInput = document.getElementById('screenshot-upload');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    
+    // Settings Modal Elements
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsBtn = document.getElementById('settings-btn');
+    const closeModal = document.querySelector('.close');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    const endDateInput = document.getElementById('end-date');
+    const timetableGrid = document.getElementById('timetable-grid');
+    const holidayDateInput = document.getElementById('holiday-date');
+    const addHolidayBtn = document.getElementById('add-holiday-btn');
+    const holidaysList = document.getElementById('holidays-list');
+    
+    const TARGET_PERCENTAGE = 75;
+    let settings = {};
+
+    // --- Core Calculation & Projection Logic ---
+    const calculateAttendance = (card) => {
+        const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
+        const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
+        const subjectName = card.querySelector('.subject-name-input').value;
+
+        if (total <= 0) {
+            updateCardUI(card, { percentage: 0, status: "Enter valid numbers.", className: '' });
+            return;
+        }
+
+        const currentPercentage = (attended / total) * 100;
+        let status = '';
+        let className = '';
+
+        // Projection Logic
+        const { futureClasses } = projectFutureClasses(subjectName);
+        const projectedAttended = attended + futureClasses;
+        const projectedTotal = total + futureClasses;
+        const projectedPercentage = projectedTotal > 0 ? (projectedAttended / projectedTotal) * 100 : 0;
+        
+        if (currentPercentage >= TARGET_PERCENTAGE) {
+            const safeToMiss = Math.floor(attended / (TARGET_PERCENTAGE / 100) - total);
+            status = `On Track. You can miss ${safeToMiss} classes.`;
+            className = 'status-safe';
+            if (futureClasses > 0) {
+                 status += ` Projected: ${projectedPercentage.toFixed(2)}%.`;
+            }
+        } else {
+            const needed = Math.ceil(((TARGET_PERCENTAGE / 100) * total - attended) / (1 - (TARGET_PERCENTAGE / 100)));
+            status = `Need to attend ${needed} more classes.`;
+            className = 'status-warning';
+
+            if (futureClasses > 0) {
+                if (projectedPercentage >= TARGET_PERCENTAGE) {
+                    status += ` Projected to be safe (${projectedPercentage.toFixed(2)}%) if you attend all future classes.`;
+                } else {
+                    status += ` Even with perfect attendance, you may not reach 75% (Projected: ${projectedPercentage.toFixed(2)}%).`;
+                    className = 'status-danger';
+                }
+            }
+        }
+        
+        updateCardUI(card, { percentage: currentPercentage, status, className });
+        saveData();
+    };
+
+    const projectFutureClasses = (subjectName) => {
+        if (!settings.endDate || !settings.timetable || !subjectName) return { futureClasses: 0 };
+        
+        let futureClasses = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        const endDate = new Date(settings.endDate);
+        
+        const holidays = (settings.holidays || []).map(h => new Date(h).toDateString());
+
+        for (let d = today; d <= endDate; d.setDate(d.getDate() + 1)) {
+            if (holidays.includes(d.toDateString())) continue;
+
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+            if (settings.timetable[dayName]?.toLowerCase().includes(subjectName.toLowerCase())) {
+                futureClasses++;
+            }
+        }
+        return { futureClasses };
+    };
+
+    // --- UI Update & DOM Manipulation ---
+    const updateCardUI = (card, result) => {
+        card.className = 'subject-card'; // Reset
+        if (result.className) card.classList.add(result.className);
+        
+        const resultDisplay = card.querySelector('.result-display');
+        resultDisplay.innerHTML = `
+            <div class="percentage">${result.percentage.toFixed(2)}%</div>
+            <div class="status-message">${result.status}</div>
+        `;
+    };
+
+    const createSubjectCard = (data = { name: '', attended: '', total: '' }) => {
+        const card = document.createElement('div');
+        card.className = 'subject-card';
+        card.innerHTML = `
+            <button class="remove-btn">&times;</button>
+            <div class="subject-grid">
+                <div class="input-group">
+                    <label>Subject Name</label>
+                    <input type="text" class="subject-name-input" placeholder="e.g., Physics" value="${data.name}">
+                </div>
+                <div class="input-group">
+                    <label>Attended</label>
+                    <input type="number" class="attended-input" min="0" value="${data.attended}">
+                </div>
+                <div class="input-group">
+                    <label>Total Held</label>
+                    <input type="number" class="total-input" min="0" value="${data.total}">
+                </div>
+            </div>
+            <div class="result-display">
+                 <div class="status-message">Enter values to calculate.</div>
+            </div>`;
+        
+        card.addEventListener('input', () => calculateAttendance(card));
+        card.querySelector('.remove-btn').addEventListener('click', () => { card.remove(); saveData(); });
+        
+        subjectsContainer.appendChild(card);
+        calculateAttendance(card);
+        return card;
+    };
+    
+    const populateAllCards = (subjectsData) => {
+        subjectsContainer.innerHTML = '';
+        subjectsData.forEach(createSubjectCard);
+    };
+
+    // --- Data Persistence (localStorage) ---
+    const saveData = () => {
+        const subjects = Array.from(document.querySelectorAll('.subject-card')).map(card => ({
+            name: card.querySelector('.subject-name-input').value,
+            attended: card.querySelector('.attended-input').value,
+            total: card.querySelector('.total-input').value
+        }));
+        localStorage.setItem('attendanceData', JSON.stringify(subjects));
+    };
+
+    const loadData = () => {
+        const data = JSON.parse(localStorage.getItem('attendanceData'));
+        if (data && data.length > 0) {
+            populateAllCards(data);
+        }
+    };
+    
+    const saveSettings = () => {
+        const timetable = {};
+        document.querySelectorAll('#timetable-grid input').forEach(input => {
+            timetable[input.dataset.day] = input.value;
+        });
+        const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
+        
+        settings = {
+            endDate: endDateInput.value,
+            timetable: timetable,
+            holidays: holidays
+        };
+        localStorage.setItem('attendanceSettings', JSON.stringify(settings));
+        settingsModal.style.display = 'none';
+        // Recalculate all cards with new settings
+        document.querySelectorAll('.subject-card').forEach(calculateAttendance);
+    };
+
+    const loadSettings = () => {
+        const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
+        if (savedSettings) {
+            settings = savedSettings;
+            endDateInput.value = settings.endDate || '';
+            
+            // Populate timetable and holidays
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            timetableGrid.innerHTML = '';
+            days.forEach(day => {
+                timetableGrid.innerHTML += `
+                    <div class="input-group">
+                        <label>${day}</label>
+                        <input type="text" data-day="${day}" placeholder="Subjects..." value="${settings.timetable?.[day] || ''}">
+                    </div>`;
+            });
+            
+            holidaysList.innerHTML = '';
+            (settings.holidays || []).forEach(addHolidayToList);
+        } else {
+            // If no settings, create empty timetable
+            loadSettings(); 
+        }
+    };
+    
+    const addHolidayToList = (date) => {
+        if (!date) return;
+        const li = document.createElement('li');
+        li.dataset.date = date;
+        li.textContent = new Date(date + 'T00:00:00').toDateString(); // Fix timezone issue
+        const removeHolidayBtn = document.createElement('button');
+        removeHolidayBtn.textContent = 'x';
+        removeHolidayBtn.style.marginLeft = '10px';
+        removeHolidayBtn.onclick = () => li.remove();
+        li.appendChild(removeHolidayBtn);
+        holidaysList.appendChild(li);
+    };
+
+    // --- Gemini API Call ---
+    const handleFileUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        loadingOverlay.style.display = 'flex';
+        
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+            const base64Image = reader.result.split(',')[1];
+            try {
+                // IMPORTANT: This calls your serverless function
+                const response = await fetch('/api/analyze-attendance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: base64Image,
+                        mimeType: file.type
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                populateAllCards(data);
+                saveData();
+
+            } catch (error) {
+                console.error("Error analyzing screenshot:", error);
+                alert("Could not analyze screenshot. Please check the format or try again.");
+            } finally {
+                loadingOverlay.style.display = 'none';
+                event.target.value = ''; // Reset file input
+            }
+        };
+    };
+
+    // --- Event Listeners ---
+    addSubjectBtn.addEventListener('click', () => createSubjectCard());
+    uploadInput.addEventListener('change', handleFileUpload);
+    
+    // Settings Modal Listeners
+    settingsBtn.addEventListener('click', () => {
+        loadSettings(); // Reload settings every time modal is opened
+        settingsModal.style.display = 'block';
+    });
+    closeModal.addEventListener('click', () => settingsModal.style.display = 'none');
+    window.addEventListener('click', (e) => { if (e.target == settingsModal) settingsModal.style.display = 'none'; });
+    saveSettingsBtn.addEventListener('click', saveSettings);
+    addHolidayBtn.addEventListener('click', () => {
+        addHolidayToList(holidayDateInput.value);
+        holidayDateInput.value = '';
+    });
+
+    // --- Initial Load ---
+    loadSettings();
+    loadData();
+});
+</script>
+</body>
+</html>
