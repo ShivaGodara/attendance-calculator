@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
 
     // Make the API call to OpenAI
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // A model that can process images
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
