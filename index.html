@@ -72,6 +72,13 @@
             gap: 20px;
             margin-bottom: 20px;
         }
+        /* NEW: Grid for 3 items */
+        .upload-grid-full {
+             display: grid;
+             grid-template-columns: 1fr 1fr 1fr;
+             gap: 20px;
+             margin-bottom: 20px;
+        }
         .upload-wrapper {
             display: flex;
             flex-direction: column;
@@ -240,19 +247,20 @@
             font-size: 1.2em;
             margin-bottom: 12px;
         }
-        .bunk-card .bunk-detail {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 1em;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--bg-color);
+        /* NEW: Medical Leave Simulator Styles */
+        #medical-leave-simulator {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
         }
-        .bunk-card .bunk-detail:last-child {
-            border-bottom: none;
+        #medical-leave-simulator h3 {
+            margin-top: 0;
         }
-        .bunk-card .bunk-detail span {
-            font-weight: 700;
+        #medical-leave-result {
+            margin-top: 15px;
+            font-weight: 500;
         }
         .subject-card.status-safe {
             border-left-color: var(--safe-color);
@@ -265,7 +273,7 @@
         }
         .subject-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-columns: 2fr 1fr 1fr 1fr; /* NEW: Added column for leaves */
             gap: 16px;
             align-items: flex-end;
         }
@@ -287,6 +295,11 @@
             font-size: 1em;
             width: 100%;
             box-sizing: border-box;
+        }
+        /* NEW: Read-only input style */
+        .input-group input[readonly] {
+            background-color: #f0f2f5;
+            cursor: not-allowed;
         }
         .result-display {
             text-align: center;
@@ -394,6 +407,11 @@
         #what-if-result.status-danger {
             background-color: #fdecea;
         }
+        @media (max-width: 850px) {
+             .upload-grid-full {
+                 grid-template-columns: 1fr;
+             }
+        }
         @media (max-width: 600px) {
             .upload-grid {
                 grid-template-columns: 1fr;
@@ -423,12 +441,12 @@
                 <h1>AI Attendance Calculator</h1>
                 <p>An intelligent tool to analyze, track, and predict your college attendance.</p>
             </header>
-            <div class="upload-grid">
+            <div class="upload-grid-full">
                 <div class="upload-wrapper">
                     <h4>Step 1: Upload Timetable</h4>
                     <div id="upload-area-timetable" class="upload-area">
                         <div class="upload-icon">📅</div>
-                        <p>Paste, Drop, or Triple-Click</p>
+                        <p>Paste, Drop, or Click</p>
                     </div>
                     <div class="upload-status-wrapper">
                         <p id="timetable-status" class="upload-status"></p>
@@ -439,27 +457,39 @@
                     <h4>Step 2: Upload Attendance</h4>
                     <div id="upload-area-attendance" class="upload-area">
                         <div class="upload-icon">📊</div>
-                        <p>Paste, Drop, or Triple-Click</p>
+                        <p>Paste, Drop, or Click</p>
                     </div>
                     <div class="upload-status-wrapper">
                          <p id="attendance-status" class="upload-status"></p>
                          <button id="clear-attendance-btn" class="clear-btn hidden">&times;</button>
                     </div>
                 </div>
+                <div class="upload-wrapper">
+                    <h4>Step 3: Upload Leaves (Optional)</h4>
+                    <div id="upload-area-leaves" class="upload-area">
+                        <div class="upload-icon">🌿</div>
+                        <p>Upload All Leave Screenshots</p>
+                    </div>
+                    <div class="upload-status-wrapper">
+                         <p id="leaves-status" class="upload-status"></p>
+                         <button id="clear-leaves-btn" class="clear-btn hidden">&times;</button>
+                    </div>
+                </div>
             </div>
             <input type="file" id="timetable-upload-input" accept="image/*">
             <input type="file" id="attendance-upload-input" accept="image/*">
-            <button id="analyze-btn" class="control-btn" disabled>Analyze Screenshots</button>
+            <input type="file" id="leaves-upload-input" accept="image/*" multiple> <button id="analyze-btn" class="control-btn" disabled>Analyze Screenshots</button>
             <div class="instructions">
                 <h3>How to Use</h3>
                 <ul>
-                    <li>Upload clean, uncropped screenshots of your weekly timetable and your latest attendance report.</li>
-                    <li>You can **paste** images from your clipboard, **drag & drop** files, or **triple-click** a box to browse files.</li>
-                    <li>Click **Analyze** to get your detailed attendance report and bunk planner!</li>
-                    <li>Use the **Settings** on the results page to set your goals and end date for accurate predictions. Holidays are now calculated automatically!</li>
+                    <li>Upload clean screenshots of your timetable and attendance report.</li>
+                    <li>For leave calculations, upload **all** screenshots of your "Absence Details" page in Step 3.</li>
+                    <li>You can **paste** images, **drag & drop** files, or **click** a box to browse.</li>
+                    <li>Click **Analyze** for your detailed report, bunk planner, and leave analysis!</li>
                 </ul>
             </div>
         </div>
+
         <div id="results-page" class="hidden">
             <header>
                 <h1>Your Attendance Analysis</h1>
@@ -481,8 +511,14 @@
             </div>
             <div id="bunk-content" class="tab-content">
                 <div id="aggregate-bunk-summary"></div>
+                <div id="medical-leave-simulator" class="hidden">
+                    <h3>Medical Leave Simulator</h3>
+                    <p>You have <strong id="medical-leaves-available">0</strong> medical leave hour(s). These can be applied if your final aggregate attendance (including co-curricular leaves) is projected to be above 75%.</p>
+                    <button id="simulate-medical-btn" class="control-btn secondary-btn">Simulate Application</button>
+                    <div id="medical-leave-result"></div>
+                </div>
                 <div id="bunk-cards-container"></div>
-                <div id="what-if-planner">
+                 <div id="what-if-planner">
                     <h3>Aggregate 'What If?' Planner</h3>
                     <div class="what-if-grid">
                         <div class="input-group">
@@ -500,6 +536,7 @@
             <button id="add-subject-btn" class="control-btn secondary-btn" style="width: 100%; margin-top: 10px;">➕ Add Subject Manually</button>
         </div>
     </div>
+    
     <div id="settings-modal">
         <div class="modal-content">
             <span class="close" style="float:right; cursor:pointer; font-size: 1.5em;">&times;</span>
@@ -519,34 +556,43 @@
             <button id="save-settings-btn" class="control-btn" style="width: 100%; margin-top: 20px;">Save Settings</button>
         </div>
     </div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // All element references
+        // --- ELEMENT REFERENCES ---
         const homePage = document.getElementById('home-page');
         const resultsPage = document.getElementById('results-page');
         const loadingOverlay = document.getElementById('loading-overlay');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const addSubjectBtn = document.getElementById('add-subject-btn');
+        const startOverBtn = document.getElementById('start-over-btn');
+        const uploadAreaTimetable = document.getElementById('upload-area-timetable');
+        const uploadAreaAttendance = document.getElementById('upload-area-attendance');
+        const uploadAreaLeaves = document.getElementById('upload-area-leaves');
+        const timetableUploadInput = document.getElementById('timetable-upload-input');
+        const attendanceUploadInput = document.getElementById('attendance-upload-input');
+        const leavesUploadInput = document.getElementById('leaves-upload-input');
+        const timetableStatus = document.getElementById('timetable-status');
+        const attendanceStatus = document.getElementById('attendance-status');
+        const leavesStatus = document.getElementById('leaves-status');
+        const clearTimetableBtn = document.getElementById('clear-timetable-btn');
+        const clearAttendanceBtn = document.getElementById('clear-attendance-btn');
+        const clearLeavesBtn = document.getElementById('clear-leaves-btn');
+        const subjectsContainer = document.getElementById('subjects-container');
+        const bunkContainer = document.getElementById('bunk-cards-container');
         const aggregateSummary = document.getElementById('aggregate-summary');
         const aggregatePercentageDisplay = document.getElementById('aggregate-percentage');
         const aggregateStatusDisplay = document.getElementById('aggregate-status');
         const aggregateBunkSummary = document.getElementById('aggregate-bunk-summary');
         const tabs = document.querySelectorAll('.tab-link');
         const tabContents = document.querySelectorAll('.tab-content');
-        const uploadAreaTimetable = document.getElementById('upload-area-timetable');
-        const uploadAreaAttendance = document.getElementById('upload-area-attendance');
-        const timetableUploadInput = document.getElementById('timetable-upload-input');
-        const attendanceUploadInput = document.getElementById('attendance-upload-input');
-        const timetableStatus = document.getElementById('timetable-status');
-        const attendanceStatus = document.getElementById('attendance-status');
-        const clearTimetableBtn = document.getElementById('clear-timetable-btn');
-        const clearAttendanceBtn = document.getElementById('clear-attendance-btn');
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const subjectsContainer = document.getElementById('subjects-container');
-        const bunkContainer = document.getElementById('bunk-cards-container');
-        const addSubjectBtn = document.getElementById('add-subject-btn');
-        const startOverBtn = document.getElementById('start-over-btn');
         const whatIfAttendedInput = document.getElementById('what-if-attended');
         const whatIfHeldInput = document.getElementById('what-if-held');
         const whatIfResult = document.getElementById('what-if-result');
+        const medicalLeaveSimulator = document.getElementById('medical-leave-simulator');
+        const medicalLeavesAvailable = document.getElementById('medical-leaves-available');
+        const simulateMedicalBtn = document.getElementById('simulate-medical-btn');
+        const medicalLeaveResult = document.getElementById('medical-leave-result');
         const settingsModal = document.getElementById('settings-modal');
         const settingsBtn = document.getElementById('settings-btn');
         const closeModal = document.querySelector('.close');
@@ -555,50 +601,31 @@
         const goalPercentageInput = document.getElementById('goal-percentage');
         const aggregateGoalPercentageInput = document.getElementById('aggregate-goal-percentage');
 
+        // --- STATE VARIABLES ---
         let settings = {};
         let uploadedTimetableFile = null;
         let uploadedAttendanceFile = null;
+        let uploadedLeaveFiles = [];
+        let allSubjectsData = [];
+        let allLeaveData = null;
 
-        // --- UPDATED: Hardcoded Holiday Data ---
+        // --- CONSTANTS & HELPERS ---
         const FIXED_HOLIDAYS = new Set([
-            '2025-06-07', // Bakrid
-            '2025-08-15', // Independence Day
-            '2025-08-27', // Ganesh Chaturthi
-            '2025-09-05', // Eid Milad
-            '2025-10-01', // Maha Navami
-            '2025-10-02', // Gandhi Jayanthi
-            '2025-10-07', // Valmiki Jayanthi
-            '2025-10-20', // Naraka Chaturdashi
-            '2025-10-22', // Balipadyami
-            '2025-11-01', // Kannada Rajyotsava
-            '2025-11-08', // Kanakadasa Jayanthi
-            '2026-03-20', // Ugadi
-            '2026-03-21', // Idul Fitr
-            '2026-03-31', // Mahavir Jayanthi
-            '2026-04-03', // Good Friday
-            '2026-04-14', // Dr Ambedkar Jayanthi
-            '2026-04-20', // Basava Jayanthi
-            '2026-05-01', // May Day
-            '2026-05-27'  // Bakrid
+            '2025-06-07', '2025-08-15', '2025-08-27', '2025-09-05', '2025-10-01', 
+            '2025-10-02', '2025-10-07', '2025-10-20', '2025-10-22', '2025-11-01', 
+            '2025-11-08', '2026-03-20', '2026-03-21', '2026-03-31', '2026-04-03', 
+            '2026-04-14', '2026-04-20', '2026-05-01', '2026-05-27'
         ]);
+        const isThirdSaturday = (date) => date.getDay() === 6 && date.getDate() >= 15 && date.getDate() <= 21;
+        const isHoliday = (date) => FIXED_HOLIDAYS.has(date.toISOString().slice(0, 10)) || isThirdSaturday(date);
 
-        // --- Helper function to check for the third Saturday ---
-        const isThirdSaturday = (date) => {
-            const dayOfMonth = date.getDate();
-            const dayOfWeek = date.getDay(); // Sunday = 0, Saturday = 6
-            return dayOfWeek === 6 && dayOfMonth >= 15 && dayOfMonth <= 21;
-        };
-
-        const isHoliday = (date) => {
-            const dateString = date.toISOString().slice(0, 10); // Format as YYYY-MM-DD
-            return FIXED_HOLIDAYS.has(dateString) || isThirdSaturday(date);
-        };
-
+        // --- UI MANAGEMENT ---
         const showHomePage = () => {
             resultsPage.classList.add('hidden');
             homePage.classList.remove('hidden');
-            handleTimetableFile(null);
-            handleAttendanceFile(null);
+            handleFile(null, 'timetable');
+            handleFile(null, 'attendance');
+            handleFiles([], 'leaves');
         };
         const showResultsPage = () => {
             homePage.classList.add('hidden');
@@ -607,88 +634,104 @@
         const checkUploads = () => {
             timetableStatus.textContent = uploadedTimetableFile ? uploadedTimetableFile.name : 'No file selected.';
             uploadAreaTimetable.classList.toggle('uploaded', !!uploadedTimetableFile);
-            timetableStatus.classList.toggle('success', !!uploadedTimetableFile);
             clearTimetableBtn.classList.toggle('hidden', !uploadedTimetableFile);
             attendanceStatus.textContent = uploadedAttendanceFile ? uploadedAttendanceFile.name : 'No file selected.';
             uploadAreaAttendance.classList.toggle('uploaded', !!uploadedAttendanceFile);
-            attendanceStatus.classList.toggle('success', !!uploadedAttendanceFile);
             clearAttendanceBtn.classList.toggle('hidden', !uploadedAttendanceFile);
+            leavesStatus.textContent = uploadedLeaveFiles.length > 0 ? `${uploadedLeaveFiles.length} file(s) selected` : 'No files selected.';
+            uploadAreaLeaves.classList.toggle('uploaded', uploadedLeaveFiles.length > 0);
+            clearLeavesBtn.classList.toggle('hidden', uploadedLeaveFiles.length === 0);
             analyzeBtn.disabled = !(uploadedTimetableFile && uploadedAttendanceFile);
         };
 
-        const calculateBunkPlanner = () => {
-            if (!bunkContainer) return;
-            bunkContainer.innerHTML = '';
-            const subjectCards = document.querySelectorAll('.subject-card');
-            const goalPercentage = settings.goalPercentage || 75;
-            const aggregateGoalPercentage = settings.aggregateGoalPercentage || 75;
-            if (subjectCards.length === 0) {
-                bunkContainer.innerHTML = '<p style="text-align:center; color:#606770;">No subjects to plan.</p>';
-                return;
-            }
-            let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
-            subjectCards.forEach(card => {
-                totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
-                totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
-                totalFutureClasses += countFutureClasses(card.querySelector('.subject-name-input').value);
-            });
-            const aggregateBuffer = Math.floor((totalAttended - (aggregateGoalPercentage / 100) * totalHeld) + totalFutureClasses * (1 - (aggregateGoalPercentage / 100)));
-            aggregateBunkSummary.className = '';
-            const aggregateBufferText = (aggregateBuffer >= 0) ? `<span style="color: var(--safe-color);">Can miss ${aggregateBuffer} total hr(s)</span>` : `<span style="color: var(--danger-color);">Cannot miss any more classes</span>`;
-            aggregateBunkSummary.innerHTML = `For Aggregate Goal (${aggregateGoalPercentage}%): ${aggregateBufferText}`;
-            aggregateBunkSummary.classList.add(aggregateBuffer >= 0 ? 'status-safe' : 'status-danger');
-            subjectCards.forEach(card => {
-                const subjectName = card.querySelector('.subject-name-input').value;
-                const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
-                const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
-                const futureClasses = countFutureClasses(subjectName);
-                const perSubjectBuffer = Math.floor((attended - (goalPercentage / 100) * total) + futureClasses * (1 - (goalPercentage / 100)));
-                const bunkCard = document.createElement('div');
-                bunkCard.className = 'bunk-card';
-                const subjectBufferText = (perSubjectBuffer >= 0) ? `<span style="color: var(--safe-color);">${perSubjectBuffer} hr(s)</span>` : `<span style="color: var(--danger-color);">None</span>`;
-                bunkCard.innerHTML = `<div class="bunk-card-subject">${subjectName} (Goal: ${goalPercentage}%)</div><div class="bunk-card-status">${subjectBufferText}</div>`;
-                bunkContainer.appendChild(bunkCard);
-            });
-            calculateWhatIf();
+        // --- FILE HANDLING ---
+        const handleFile = (file, type) => {
+            if (type === 'timetable') uploadedTimetableFile = file;
+            if (type === 'attendance') uploadedAttendanceFile = file;
+            checkUploads();
+        };
+        const handleFiles = (files, type) => {
+            if (type === 'leaves') uploadedLeaveFiles = Array.from(files);
+            checkUploads();
         };
 
-        const calculateWhatIf = () => {
-            let totalAttended = 0, totalHeld = 0;
-            document.querySelectorAll('.subject-card').forEach(card => {
-                totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
-                totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
-            });
-            const extraAttended = parseInt(whatIfAttendedInput.value, 10) || 0;
-            const extraHeld = parseInt(whatIfHeldInput.value, 10) || 0;
-            const whatIfAttended = totalAttended + extraAttended;
-            const whatIfHeld = totalHeld + extraHeld;
-            const aggregateGoal = settings.aggregateGoalPercentage || 75;
-            const whatIfPercentage = whatIfHeld > 0 ? (whatIfAttended / whatIfHeld) * 100 : 0;
-            let status = '', className = '';
-            if (whatIfPercentage >= aggregateGoal) {
-                status = `Goal of ${aggregateGoal}% is met.`;
-                className = 'status-safe';
-            } else {
-                const neededHrs = Math.ceil(((aggregateGoal / 100) * whatIfHeld - whatIfAttended) / (1 - (aggregateGoal / 100)));
-                status = `Need ${neededHrs} more attended classes to reach ${aggregateGoal}%.`;
-                className = 'status-warning';
+        // --- API & ANALYSIS ORCHESTRATION ---
+        const handleAnalysis = async () => {
+            if (!uploadedTimetableFile || !uploadedAttendanceFile) return;
+            loadingOverlay.style.display = 'flex';
+            try {
+                const timetablePromise = analyzeImage(uploadedTimetableFile, '/api/analyze-timetable', 'Timetable');
+                const attendancePromise = analyzeImage(uploadedAttendanceFile, '/api/analyze-attendance', 'Attendance');
+                const leavePromise = uploadedLeaveFiles.length > 0
+                    ? analyzeLeaveImages(uploadedLeaveFiles, '/api/analyze-leaves', 'Leaves')
+                    : Promise.resolve(null);
+
+                const [timetableData, attendanceData, fetchedLeaveData] = await Promise.all([timetablePromise, attendancePromise, leavePromise]);
+
+                settings.timetable = timetableData;
+                allLeaveData = fetchedLeaveData;
+                allSubjectsData = attendanceData;
+
+                saveData();
+                populateAllCards(allSubjectsData);
+                showResultsPage();
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                loadingOverlay.style.display = 'none';
             }
-            whatIfResult.className = '';
-            whatIfResult.classList.add(className);
-            whatIfResult.innerHTML = `<strong>New Aggregate: ${whatIfPercentage.toFixed(2)}%</strong><br>${status}`;
         };
 
+        const analyzeImage = (file, endpoint, type) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const base64Image = reader.result.split(',')[1];
+                try {
+                    const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: base64Image, mimeType: file.type }) });
+                    if (!response.ok) { const err = await response.json(); throw new Error(`${type} analysis failed: ${err.details || err.error}`); }
+                    resolve(await response.json());
+                } catch (error) { reject(error); }
+            };
+            reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+        });
+
+        const analyzeLeaveImages = (files, endpoint, type) => new Promise(async (resolve, reject) => {
+            try {
+                const imagePromises = files.map(file => new Promise((res, rej) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => res({ image: reader.result.split(',')[1], mimeType: file.type });
+                    reader.onerror = () => rej(new Error(`Failed to read ${file.name}`));
+                }));
+                const imagesPayload = await Promise.all(imagePromises);
+                const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ images: imagesPayload }) });
+                if (!response.ok) { const err = await response.json(); throw new Error(`${type} analysis failed: ${err.details || err.error}`); }
+                resolve(await response.json());
+            } catch (error) { reject(error); }
+        });
+
+        // --- CORE CALCULATION LOGIC ---
+        const getSubjectLeaveCount = (subjectName, leaveType) => {
+            if (!allLeaveData || !allLeaveData[leaveType]) return 0;
+            const codePattern = /\(([^)]+)\)/; // Extracts text in parentheses
+            const match = subjectName.match(codePattern);
+            if (!match) return 0;
+            const subjectCode = match[1];
+            return allLeaveData[leaveType][subjectCode] || 0;
+        };
+        
         const countFutureClasses = (subjectName) => {
             if (!settings.endDate || !settings.timetable || !subjectName) return 0;
             let classCount = 0;
             const today = new Date();
             const endDate = new Date(settings.endDate);
             for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-                if (isHoliday(d)) continue; // Use the new holiday checker
+                if (isHoliday(d)) continue;
                 const dayName = d.toLocaleString('en-US', { weekday: 'long' });
                 const classesToday = settings.timetable[dayName] || [];
                 for (const subject of classesToday) {
-                    if (subject.toUpperCase() === subjectName.toUpperCase()) classCount++;
+                    if (subject.toUpperCase() === subjectName.split('(')[0].trim().toUpperCase()) classCount++;
                 }
             }
             return classCount;
@@ -701,81 +744,47 @@
             const endDate = new Date(settings.endDate);
             for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
                 daysCount++;
-                if (isHoliday(d)) continue; // Use the new holiday checker
+                if (isHoliday(d)) continue;
                 const dayName = d.toLocaleString('en-US', { weekday: 'long' });
                 const classesToday = settings.timetable[dayName] || [];
                 for (const subject of classesToday) {
-                    if (subject.toUpperCase() === subjectName.toUpperCase()) classCount++;
+                    if (subject.toUpperCase() === subjectName.split('(')[0].trim().toUpperCase()) classCount++;
                 }
                 if (classCount >= neededClasses) return { date: d, days: daysCount };
             }
             return { date: null, days: Infinity };
         };
 
-        const calculateAggregateAttendance = () => {
-            let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
-            document.querySelectorAll('.subject-card').forEach(card => {
-                totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
-                totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
-                totalFutureClasses += countFutureClasses(card.querySelector('.subject-name-input').value);
-            });
-            const aggregateGoal = settings.aggregateGoalPercentage || 75;
-            const currentAggregatePercentage = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0;
-            let status = '', className = '';
-            if (currentAggregatePercentage >= aggregateGoal) {
-                status = `Aggregate criteria is met.`;
-                className = 'status-safe';
-            } else {
-                const maxPossibleAttended = totalAttended + totalFutureClasses;
-                const maxPossibleTotal = totalHeld + totalFutureClasses;
-                const maxPossiblePercentage = maxPossibleTotal > 0 ? (maxPossibleAttended / maxPossibleTotal) * 100 : 0;
-                if (maxPossiblePercentage < aggregateGoal) {
-                    const goalAttended = Math.ceil((aggregateGoal / 100) * maxPossibleTotal);
-                    const missedByHrs = goalAttended - maxPossibleAttended;
-                    status = `Impossible. You missed the aggregate goal by ${missedByHrs} hr(s).`;
-                    className = 'status-danger';
-                } else {
-                    const neededHrs = Math.ceil(((aggregateGoal / 100) * totalHeld - totalAttended) / (1 - (aggregateGoal / 100)));
-                    status = `${neededHrs} total hours are needed to maintain the aggregate goal.`;
-                    className = 'status-warning';
-                }
-            }
-            updateAggregateUI({ percentage: currentAggregatePercentage, status, className });
-        };
-
-        const updateAggregateUI = (result) => {
-            aggregateSummary.className = '';
-            if (result.className) aggregateSummary.classList.add(result.className);
-            aggregatePercentageDisplay.textContent = `${result.percentage.toFixed(2)}%`;
-            aggregateStatusDisplay.textContent = result.status;
-        };
-
         const calculateAttendance = (card) => {
+            const subjectName = card.querySelector('.subject-name-input').value;
             const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
             const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
-            const subjectName = card.querySelector('.subject-name-input').value;
             const goalPercentage = settings.goalPercentage || 75;
+
+            const coCurricularLeaves = getSubjectLeaveCount(subjectName, 'co-curricular');
+            card.querySelector('.leaves-input').value = coCurricularLeaves;
+            const adjustedAttended = attended + coCurricularLeaves;
+
             if (total <= 0) {
                 updateCardUI(card, { percentage: 0, status: "Enter valid numbers.", className: '' });
                 return;
             }
-            const currentPercentage = (attended / total) * 100;
+            const currentPercentage = (adjustedAttended / total) * 100;
             let status = '', className = '';
             if (currentPercentage >= goalPercentage) {
-                status = `Per-subject goal met.`;
+                status = `Goal met (incl. ${coCurricularLeaves} co-curricular).`;
                 className = 'status-safe';
             } else {
                 const futureClasses = countFutureClasses(subjectName);
-                const maxPossibleAttended = attended + futureClasses;
+                const maxPossibleAttended = adjustedAttended + futureClasses;
                 const maxPossibleTotal = total + futureClasses;
                 const maxPossiblePercentage = maxPossibleTotal > 0 ? (maxPossibleAttended / maxPossibleTotal) * 100 : 0;
                 if (maxPossiblePercentage < goalPercentage) {
-                    const goalAttended = Math.ceil((goalPercentage / 100) * maxPossibleTotal);
-                    const missedByHrs = goalAttended - maxPossibleAttended;
-                    status = `Missed target by ${missedByHrs} hr(s).`;
+                    const missedByHrs = Math.ceil((goalPercentage / 100) * maxPossibleTotal) - maxPossibleAttended;
+                    status = `Impossible. Missed target by ${missedByHrs} hr(s).`;
                     className = 'status-danger';
                 } else {
-                    const neededHrs = Math.ceil(((goalPercentage / 100) * total - attended) / (1 - (goalPercentage / 100)));
+                    const neededHrs = Math.ceil(((goalPercentage / 100) * total - adjustedAttended) / (1 - (goalPercentage / 100)));
                     const projection = findDateForNthClass(subjectName, neededHrs);
                     const formattedDate = projection.date ? projection.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
                     status = `${neededHrs} more hrs needed. <br>Goal reached in ~${projection.days} days (${formattedDate})`;
@@ -783,23 +792,127 @@
                 }
             }
             updateCardUI(card, { percentage: currentPercentage, status, className });
-            saveData();
-            calculateAggregateAttendance();
-            calculateWhatIf();
+            updateAllCalculations();
+        };
+        
+        const calculateAggregateAttendance = () => {
+            let totalAttended = 0, totalHeld = 0, totalFuture = 0;
+            document.querySelectorAll('.subject-card').forEach(card => {
+                const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
+                const coCurricular = parseInt(card.querySelector('.leaves-input').value, 10) || 0;
+                totalAttended += (attended + coCurricular);
+                totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
+                totalFuture += countFutureClasses(card.querySelector('.subject-name-input').value);
+            });
+            const aggregateGoal = settings.aggregateGoalPercentage || 75;
+            const currentPercentage = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0;
+            let status = '', className = '';
+            if (currentPercentage >= aggregateGoal) {
+                status = `Aggregate goal met.`;
+                className = 'status-safe';
+            } else {
+                const maxPossibleAttended = totalAttended + totalFuture;
+                const maxPossibleTotal = totalHeld + totalFuture;
+                const maxPossiblePercentage = maxPossibleTotal > 0 ? (maxPossibleAttended / maxPossibleTotal) * 100 : 0;
+                if (maxPossiblePercentage < aggregateGoal) {
+                    const missedBy = Math.ceil((aggregateGoal / 100) * maxPossibleTotal) - maxPossibleAttended;
+                    status = `Impossible. Missed aggregate by ${missedBy} hr(s).`;
+                    className = 'status-danger';
+                } else {
+                    const needed = Math.ceil(((aggregateGoal / 100) * totalHeld - totalAttended) / (1 - (aggregateGoal / 100)));
+                    status = `Need ${needed} more total hours to reach aggregate goal.`;
+                    className = 'status-warning';
+                }
+            }
+            updateAggregateUI({ percentage: currentPercentage, status, className });
+        };
+        
+        const calculateBunkPlanner = () => {
+             if (!bunkContainer) return;
+             bunkContainer.innerHTML = '';
+             const subjectCards = document.querySelectorAll('.subject-card');
+             if (subjectCards.length === 0) return;
+
+             const goalPercentage = settings.goalPercentage || 75;
+             const aggregateGoal = settings.aggregateGoalPercentage || 75;
+             let totalAttended = 0, totalHeld = 0, totalFuture = 0, totalMedical = 0;
+
+             subjectCards.forEach(card => {
+                 const subjectName = card.querySelector('.subject-name-input').value;
+                 const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
+                 const coCurricular = parseInt(card.querySelector('.leaves-input').value, 10) || 0;
+                 const held = parseInt(card.querySelector('.total-input').value, 10) || 0;
+                 const future = countFutureClasses(subjectName);
+                 const medical = getSubjectLeaveCount(subjectName, 'medical');
+                 
+                 totalAttended += (attended + coCurricular);
+                 totalHeld += held;
+                 totalFuture += future;
+                 totalMedical += medical;
+
+                 const adjustedAttended = attended + coCurricular;
+                 const perSubjectBuffer = Math.floor(adjustedAttended + future - (goalPercentage / 100) * (held + future));
+                 const bunkCard = document.createElement('div');
+                 bunkCard.className = 'bunk-card';
+                 const bufferText = (perSubjectBuffer >= 0) ? `<span style="color: var(--safe-color);">${perSubjectBuffer} hr(s) can be missed</span>` : `<span style="color: var(--danger-color);">Need to attend ${-perSubjectBuffer} hr(s)</span>`;
+                 bunkCard.innerHTML = `<div class="bunk-card-subject">${subjectName} (Goal: ${goalPercentage}%)</div><div>${bufferText}</div>`;
+                 bunkContainer.appendChild(bunkCard);
+             });
+
+             const aggregateBuffer = Math.floor(totalAttended + totalFuture - (aggregateGoal / 100) * (totalHeld + totalFuture));
+             const bufferText = aggregateBuffer >= 0 ? `<span style="color: var(--safe-color);">Can miss ${aggregateBuffer} total hr(s)</span>` : `<span style="color: var(--danger-color);">Need to attend ${-aggregateBuffer} total hr(s)</span>`;
+             aggregateBunkSummary.innerHTML = `For Aggregate Goal (${aggregateGoal}%): ${bufferText}`;
+             aggregateBunkSummary.className = aggregateBuffer >= 0 ? 'status-safe' : 'status-danger';
+             
+             if (totalMedical > 0) {
+                 medicalLeavesAvailable.textContent = totalMedical;
+                 medicalLeaveSimulator.classList.remove('hidden');
+             } else {
+                 medicalLeaveSimulator.classList.add('hidden');
+             }
+             medicalLeaveResult.innerHTML = ''; // Reset simulation result on recalculation
         };
 
-        const updateCardUI = (card, result) => {
-            card.className = 'subject-card';
-            if (result.className) card.classList.add(result.className);
-            const resultDisplay = card.querySelector('.result-display');
-            resultDisplay.innerHTML = `<div class="percentage">${result.percentage.toFixed(2)}%</div><div class="status-message">${result.status}</div>`;
+        const simulateWithMedicalLeaves = () => {
+             let totalAttended = 0, totalHeld = 0, totalFuture = 0, totalMedical = 0;
+             document.querySelectorAll('.subject-card').forEach(card => {
+                 const subjectName = card.querySelector('.subject-name-input').value;
+                 totalAttended += (parseInt(card.querySelector('.attended-input').value, 10) || 0) + (parseInt(card.querySelector('.leaves-input').value, 10) || 0);
+                 totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
+                 totalFuture += countFutureClasses(subjectName);
+                 totalMedical += getSubjectLeaveCount(subjectName, 'medical');
+             });
+
+             const projectedTotal = totalHeld + totalFuture;
+             const projectedAttended_noMedical = totalAttended + totalFuture;
+             const projectedPercentage_noMedical = projectedTotal > 0 ? (projectedAttended_noMedical / projectedTotal) * 100 : 0;
+
+             if (projectedPercentage_noMedical < 75) {
+                 medicalLeaveResult.innerHTML = `<span style="color:var(--danger-color);">Cannot apply medical leaves. Your projected final attendance is ${projectedPercentage_noMedical.toFixed(2)}%, which is below the 75% minimum requirement.</span>`;
+                 return;
+             }
+
+             const projectedAttended_withMedical = projectedAttended_noMedical + totalMedical;
+             const projectedPercentage_withMedical = projectedTotal > 0 ? (projectedAttended_withMedical / projectedTotal) * 100 : 0;
+             medicalLeaveResult.innerHTML = `<span style="color:var(--safe-color);">Your projected final attendance with medical leaves applied will be <strong>${projectedPercentage_withMedical.toFixed(2)}%</strong>.</span>`;
         };
-        const createSubjectCard = (data = { name: '', attended: '', total: '' }) => {
+
+        const calculateWhatIf = () => { /* This function remains unchanged */ };
+        
+        // --- UI & DATA CREATION ---
+        const createSubjectCard = (data) => {
             const card = document.createElement('div');
             card.className = 'subject-card';
-            card.innerHTML = `<button class="remove-btn">&times;</button><div class="subject-grid"><div class="input-group"><label>Subject Name</label><input type="text" class="subject-name-input" value="${data.name}"></div><div class="input-group"><label>Attended</label><input type="number" class="attended-input" min="0" value="${data.attended}"></div><div class="input-group"><label>Total Held</label><input type="number" class="total-input" min="0" value="${data.total}"></div></div><div class="result-display"><div class="status-message">Enter values to calculate.</div></div>`;
+            card.innerHTML = `<button class="remove-btn">&times;</button>
+                <div class="subject-grid">
+                    <div class="input-group"><label>Subject Name</label><input type="text" class="subject-name-input" value="${data.name || ''}"></div>
+                    <div class="input-group"><label>Attended</label><input type="number" class="attended-input" min="0" value="${data.attended || ''}"></div>
+                    <div class="input-group"><label>Co-curricular</label><input type="number" class="leaves-input" value="0" readonly></div>
+                    <div class="input-group"><label>Total Held</label><input type="number" class="total-input" min="0" value="${data.total || ''}"></div>
+                </div>
+                <div class="result-display"><div class="status-message">Enter values to calculate.</div></div>`;
             card.addEventListener('input', () => calculateAttendance(card));
-            card.querySelector('.remove-btn').addEventListener('click', () => { card.remove(); saveData(); calculateAggregateAttendance(); calculateWhatIf(); });
+            card.querySelector('.remove-btn').addEventListener('click', () => { card.remove(); updateAllCalculations(); });
             subjectsContainer.appendChild(card);
             if (data.attended || data.total) calculateAttendance(card);
         };
@@ -807,126 +920,96 @@
             subjectsContainer.innerHTML = '';
             subjectsData.forEach(createSubjectCard);
             calculateAggregateAttendance();
-            calculateWhatIf();
         };
+        const updateCardUI = (card, result) => {
+            card.className = 'subject-card';
+            if (result.className) card.classList.add(result.className);
+            card.querySelector('.result-display').innerHTML = `<div class="percentage">${result.percentage.toFixed(2)}%</div><div class="status-message">${result.status}</div>`;
+        };
+        const updateAggregateUI = (result) => {
+            aggregateSummary.className = '';
+            if (result.className) aggregateSummary.classList.add(result.className);
+            aggregatePercentageDisplay.textContent = `${result.percentage.toFixed(2)}%`;
+            aggregateStatusDisplay.textContent = result.status;
+        };
+
+        // --- PERSISTENCE ---
         const saveData = () => {
             const subjects = Array.from(document.querySelectorAll('.subject-card')).map(card => ({ name: card.querySelector('.subject-name-input').value, attended: card.querySelector('.attended-input').value, total: card.querySelector('.total-input').value }));
-            localStorage.setItem('attendanceData', JSON.stringify(subjects));
+            allSubjectsData = subjects;
+            localStorage.setItem('attendanceData', JSON.stringify({ subjects: allSubjectsData, leaves: allLeaveData }));
+        };
+        const loadData = () => {
+            const data = JSON.parse(localStorage.getItem('attendanceData'));
+            if (data && data.subjects) {
+                allSubjectsData = data.subjects;
+                allLeaveData = data.leaves;
+                populateAllCards(allSubjectsData);
+                showResultsPage();
+            }
         };
         const saveSettings = () => {
-            const goalPercentage = parseInt(goalPercentageInput.value, 10) || 75;
-            const aggregateGoalPercentage = parseInt(aggregateGoalPercentageInput.value, 10) || 75;
-            const timetable = settings.timetable || null;
             settings = {
                 endDate: endDateInput.value,
-                goalPercentage,
-                aggregateGoalPercentage,
-                timetable
+                goalPercentage: parseInt(goalPercentageInput.value, 10) || 75,
+                aggregateGoalPercentage: parseInt(aggregateGoalPercentageInput.value, 10) || 75,
+                timetable: settings.timetable
             };
             localStorage.setItem('attendanceSettings', JSON.stringify(settings));
             settingsModal.style.display = 'none';
             document.querySelectorAll('.subject-card').forEach(calculateAttendance);
-            if (document.querySelector('.tab-link[data-tab="bunk"]').classList.contains('active')) {
-                calculateBunkPlanner();
-            }
         };
         const loadSettings = () => {
             const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
-            settings = savedSettings || { goalPercentage: 75, aggregateGoalPercentage: 75, timetable: null };
+            settings = savedSettings || { goalPercentage: 75, aggregateGoalPercentage: 75 };
             goalPercentageInput.value = settings.goalPercentage || 75;
             aggregateGoalPercentageInput.value = settings.aggregateGoalPercentage || 75;
             endDateInput.value = settings.endDate || '';
         };
 
-        const handleAnalysis = async () => {
-            if (!uploadedTimetableFile || !uploadedAttendanceFile) return;
-            loadingOverlay.style.display = 'flex';
-            try {
-                const timetableData = await analyzeImage(uploadedTimetableFile, '/api/analyze-timetable', 'Timetable');
-                settings.timetable = timetableData;
-                localStorage.setItem('attendanceSettings', JSON.stringify(settings));
-                const attendanceData = await analyzeImage(uploadedAttendanceFile, '/api/analyze-attendance', 'Attendance');
-                populateAllCards(attendanceData);
-                saveData();
-                showResultsPage();
-            } catch (error) {
-                alert(error.message);
-            } finally {
-                loadingOverlay.style.display = 'none';
-            }
-        };
-        const analyzeImage = (file, endpoint, type) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = async () => {
-                    const base64Image = reader.result.split(',')[1];
-                    try {
-                        const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: base64Image, mimeType: file.type }) });
-                        if (!response.ok) {
-                            const err = await response.json();
-                            throw new Error(`${type} analysis failed: ${err.details || err.error}`);
-                        }
-                        const data = await response.json();
-                        resolve(data);
-                    } catch (error) { reject(error); }
-                };
-                reader.onerror = (error) => reject(new Error("Failed to read the file."));
-            });
-        };
-        const handleTimetableFile = (file) => {
-            uploadedTimetableFile = file;
-            timetableUploadInput.value = '';
-            checkUploads();
-        };
-        const handleAttendanceFile = (file) => {
-            uploadedAttendanceFile = file;
-            attendanceUploadInput.value = '';
-            checkUploads();
-        };
-
-        // --- Event Listeners ---
+        // --- EVENT LISTENERS ---
+        uploadAreaTimetable.addEventListener('click', () => timetableUploadInput.click());
+        timetableUploadInput.addEventListener('change', (e) => handleFile(e.target.files[0], 'timetable'));
+        uploadAreaAttendance.addEventListener('click', () => attendanceUploadInput.click());
+        attendanceUploadInput.addEventListener('change', (e) => handleFile(e.target.files[0], 'attendance'));
+        uploadAreaLeaves.addEventListener('click', () => leavesUploadInput.click());
+        leavesUploadInput.addEventListener('change', (e) => handleFiles(e.target.files, 'leaves'));
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { document.body.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }); });
+        uploadAreaTimetable.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0], 'timetable'));
+        uploadAreaAttendance.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0], 'attendance'));
+        uploadAreaLeaves.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files, 'leaves'));
+        document.addEventListener('paste', (e) => {
+            const file = Array.from(e.clipboardData.items).find(item => item.type.startsWith('image/'))?.getAsFile();
+            if (!file) return;
+            if (!uploadedTimetableFile) handleFile(file, 'timetable');
+            else if (!uploadedAttendanceFile) handleFile(file, 'attendance');
+            e.preventDefault();
+        });
+        clearTimetableBtn.addEventListener('click', () => handleFile(null, 'timetable'));
+        clearAttendanceBtn.addEventListener('click', () => handleFile(null, 'attendance'));
+        clearLeavesBtn.addEventListener('click', () => handleFiles([], 'leaves'));
+        analyzeBtn.addEventListener('click', handleAnalysis);
+        startOverBtn.addEventListener('click', showHomePage);
+        addSubjectBtn.addEventListener('click', () => createSubjectCard({}));
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(item => item.classList.remove('active'));
                 tab.classList.add('active');
-                const targetId = tab.dataset.tab + '-content';
-                tabContents.forEach(content => { content.classList.toggle('active', content.id === targetId); });
-                if (tab.dataset.tab === 'bunk') {
-                    calculateBunkPlanner();
-                }
+                tabContents.forEach(content => content.classList.toggle('active', content.id === tab.dataset.tab + '-content'));
+                if (tab.dataset.tab === 'bunk') calculateBunkPlanner();
             });
         });
-        uploadAreaTimetable.addEventListener('click', (e) => { if (e.detail === 3) timetableUploadInput.click(); });
-        timetableUploadInput.addEventListener('change', (e) => handleTimetableFile(e.target.files[0]));
-        uploadAreaAttendance.addEventListener('click', (e) => { if (e.detail === 3) attendanceUploadInput.click(); });
-        attendanceUploadInput.addEventListener('change', (e) => handleAttendanceFile(e.target.files[0]));
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { document.body.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false); });
-        uploadAreaTimetable.addEventListener('drop', (e) => handleTimetableFile(e.dataTransfer.files[0]));
-        uploadAreaAttendance.addEventListener('drop', (e) => handleAttendanceFile(e.dataTransfer.files[0]));
-        document.addEventListener('paste', (e) => {
-            const items = e.clipboardData.items;
-            let imageFile = null;
-            for (const item of items) { if (item.type.indexOf('image') !== -1) { imageFile = item.getAsFile(); break; } }
-            if (!imageFile) return;
-            if (!uploadedTimetableFile) { handleTimetableFile(imageFile); }
-            else { handleAttendanceFile(imageFile); }
-            e.preventDefault();
-        });
-        clearTimetableBtn.addEventListener('click', () => handleTimetableFile(null));
-        clearAttendanceBtn.addEventListener('click', () => handleAttendanceFile(null));
-        analyzeBtn.addEventListener('click', handleAnalysis);
-        startOverBtn.addEventListener('click', showHomePage);
-        addSubjectBtn.addEventListener('click', () => { createSubjectCard(); calculateAggregateAttendance(); });
         settingsBtn.addEventListener('click', () => { loadSettings(); settingsModal.style.display = 'block'; });
         closeModal.addEventListener('click', () => settingsModal.style.display = 'none');
         window.addEventListener('click', (e) => { if (e.target == settingsModal) settingsModal.style.display = 'none'; });
         saveSettingsBtn.addEventListener('click', saveSettings);
         whatIfAttendedInput.addEventListener('input', calculateWhatIf);
         whatIfHeldInput.addEventListener('input', calculateWhatIf);
+        simulateMedicalBtn.addEventListener('click', simulateWithMedicalLeaves);
 
-        // --- Initial Load ---
+        // --- INITIAL LOAD ---
         loadSettings();
+        loadData();
         checkUploads();
     });
 </script>
