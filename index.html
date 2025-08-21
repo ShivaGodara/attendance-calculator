@@ -81,14 +81,14 @@
                 <div class="upload-wrapper">
                     <div id="upload-area-timetable" class="upload-area">
                         <div class="upload-icon">📅</div>
-                        <p>1. Upload Timetable</p>
+                        <p>Click, Paste, or Drop Timetable</p>
                     </div>
                     <p id="timetable-status" class="upload-status"></p>
                 </div>
                 <div class="upload-wrapper">
                     <div id="upload-area-attendance" class="upload-area">
                         <div class="upload-icon">📊</div>
-                        <p>2. Upload Attendance</p>
+                        <p>Click, Paste, or Drop Attendance</p>
                     </div>
                      <p id="attendance-status" class="upload-status"></p>
                 </div>
@@ -348,7 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
         const goalPercentage = parseInt(goalPercentageInput.value, 10) || 75;
         const aggregateGoalPercentage = parseInt(aggregateGoalPercentageInput.value, 10) || 75;
-        // Keep existing timetable if it's there
         const timetable = settings.timetable || null; 
         settings = { endDate: endDateInput.value, holidays, goalPercentage, aggregateGoalPercentage, timetable };
         localStorage.setItem('attendanceSettings', JSON.stringify(settings));
@@ -382,17 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
         holidaysList.appendChild(li);
     };
 
-    // --- Main Analysis Trigger ---
     const handleAnalysis = async () => {
         if (!uploadedTimetableFile || !uploadedAttendanceFile) return;
         loadingOverlay.style.display = 'flex';
         try {
-            // 1. Analyze Timetable
             const timetableData = await analyzeImage(uploadedTimetableFile, '/api/analyze-timetable');
-            settings.timetable = timetableData; // Store timetable in settings
+            settings.timetable = timetableData;
             localStorage.setItem('attendanceSettings', JSON.stringify(settings));
-
-            // 2. Analyze Attendance
             const attendanceData = await analyzeImage(uploadedAttendanceFile, '/api/analyze-attendance');
             populateAllCards(attendanceData);
             saveData();
@@ -427,20 +422,56 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.onerror = reject;
         });
     };
+    
+    // --- Refactored File Handlers ---
+    const handleTimetableFile = (file) => {
+        if (file && file.type.startsWith('image/')) {
+            uploadedTimetableFile = file;
+            checkUploads();
+        }
+    };
+
+    const handleAttendanceFile = (file) => {
+        if (file && file.type.startsWith('image/')) {
+            uploadedAttendanceFile = file;
+            checkUploads();
+        }
+    };
 
     // --- Event Listeners ---
     uploadAreaTimetable.addEventListener('click', () => timetableUploadInput.click());
-    timetableUploadInput.addEventListener('change', (e) => {
-        uploadedTimetableFile = e.target.files[0];
-        checkUploads();
-    });
+    timetableUploadInput.addEventListener('change', (e) => handleTimetableFile(e.target.files[0]));
 
     uploadAreaAttendance.addEventListener('click', () => attendanceUploadInput.click());
-    attendanceUploadInput.addEventListener('change', (e) => {
-        uploadedAttendanceFile = e.target.files[0];
-        checkUploads();
-    });
+    attendanceUploadInput.addEventListener('change', (e) => handleAttendanceFile(e.target.files[0]));
     
+    // Drag, Drop, and Paste Listeners
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadAreaTimetable.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+        uploadAreaAttendance.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    uploadAreaTimetable.addEventListener('drop', (e) => handleTimetableFile(e.dataTransfer.files[0]));
+    uploadAreaAttendance.addEventListener('drop', (e) => handleAttendanceFile(e.dataTransfer.files[0]));
+
+    document.addEventListener('paste', (e) => {
+        const target = e.target.closest('.upload-area');
+        if (!target) return; // Don't handle paste unless it's in an upload area
+
+        const items = e.clipboardData.items;
+        for (const item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                const imageFile = item.getAsFile();
+                if (target.id === 'upload-area-timetable') {
+                    handleTimetableFile(imageFile);
+                } else if (target.id === 'upload-area-attendance') {
+                    handleAttendanceFile(imageFile);
+                }
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+
     analyzeBtn.addEventListener('click', handleAnalysis);
     startOverBtn.addEventListener('click', showHomePage);
     addSubjectBtn.addEventListener('click', () => { createSubjectCard(); calculateAggregateAttendance(); });
