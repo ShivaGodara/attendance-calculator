@@ -44,7 +44,7 @@
         .input-group input { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em; width: 100%; box-sizing: border-box; }
         .result-display { text-align: center; padding: 10px; border-radius: 6px; margin-top: 16px; }
         .result-display .percentage { font-size: 1.5em; font-weight: 700; }
-        .result-display .status-message { font-size: 0.9em; margin-top: 4px; }
+        .result-display .status-message { font-size: 1em; margin-top: 4px; font-weight: 500; }
         .status-safe .result-display { background-color: #eaf6ec; color: var(--safe-color); }
         .status-warning .result-display { background-color: #fff8e1; color: #b79000; }
         .status-danger .result-display { background-color: #fdecea; color: var(--danger-color); }
@@ -181,7 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsPage.classList.remove('hidden');
     };
 
-    // --- NEW HELPER FUNCTION TO COUNT ALL FUTURE CLASSES ---
     const countFutureClasses = (subjectName) => {
         if (!settings.endDate || !subjectName) return 0;
         let classCount = 0;
@@ -202,31 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return classCount;
     };
 
-    const findDateForNthClass = (subjectName, neededClasses) => {
-        if (!settings.endDate || !subjectName || neededClasses <= 0) return { date: null, days: Infinity };
-        let classCount = 0, daysCount = 0;
-        const today = new Date();
-        const endDate = new Date(settings.endDate);
-        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
-        
-        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-            daysCount++;
-            if (holidays.includes(d.toDateString())) continue;
-            const dayName = d.toLocaleString('en-US', { weekday: 'long' });
-            const classesToday = FIXED_TIMETABLE[dayName] || [];
-            for (const subject of classesToday) {
-                if (subject.toUpperCase() === subjectName.toUpperCase()) {
-                    classCount++;
-                }
-            }
-            if (classCount >= neededClasses) {
-                return { date: d, days: daysCount };
-            }
-        }
-        return { date: null, days: Infinity };
-    };
-
-    // --- UPDATED CALCULATION LOGIC WITH IMPOSSIBILITY CHECK ---
+    // --- UPDATED CALCULATION LOGIC WITH NEW OUTPUT MESSAGES ---
     const calculateAttendance = (card) => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
@@ -241,33 +216,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentPercentage = (attended / total) * 100;
         let status = '', className = '';
 
+        // State 1: Already Reached (Safe)
         if (currentPercentage >= goalPercentage) {
             const safeToMiss = Math.floor(attended / (goalPercentage / 100) - total);
-            status = `On Track. You can safely miss the next ${safeToMiss} classes.`;
+            status = `You can miss ${safeToMiss} more class(es).`;
             className = 'status-safe';
         } else {
-            // First, check if the goal is even possible
+            // Check if it's possible to reach the goal
             const futureClasses = countFutureClasses(subjectName);
             const maxPossibleAttended = attended + futureClasses;
             const maxPossibleTotal = total + futureClasses;
             const maxPossiblePercentage = maxPossibleTotal > 0 ? (maxPossibleAttended / maxPossibleTotal) * 100 : 0;
 
+            // State 3: Impossible to Reach (Danger)
             if (maxPossiblePercentage < goalPercentage) {
-                status = `Impossible to reach ${goalPercentage}%. Maximum possible is ${maxPossiblePercentage.toFixed(2)}%.`;
+                const goalAttended = Math.ceil((goalPercentage / 100) * maxPossibleTotal);
+                const missedByHrs = goalAttended - maxPossibleAttended;
+                status = `Missed target by ${missedByHrs} hr(s).`;
                 className = 'status-danger';
             } else {
-                // If it's possible, then calculate the date
+                // State 2: Possible to Reach (Warning)
                 const neededHrs = Math.ceil(((goalPercentage / 100) * total - attended) / (1 - (goalPercentage / 100)));
-                const projection = findDateForNthClass(subjectName, neededHrs);
-                if (projection.date) {
-                    const formattedDate = projection.date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-                    status = `Need ${neededHrs} more hrs → will reach ${goalPercentage}% in ~${projection.days} day(s), around ${formattedDate}`;
-                    className = 'status-warning';
-                } else {
-                    // This is a fallback, but the check above should catch impossibility
-                    status = `Need to attend ${neededHrs} more classes to reach ${goalPercentage}%.`;
-                    className = 'status-warning';
-                }
+                status = `Need to attend ${neededHrs} more hr(s).`;
+                className = 'status-warning';
             }
         }
         updateCardUI(card, { percentage: currentPercentage, status, className });
