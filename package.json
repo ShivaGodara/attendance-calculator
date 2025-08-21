@@ -1,12 +1,8 @@
 {
-  "name": "attendance-calculator-mvp",
+  "name": "ai-attendance-calculator",
   "version": "1.0.0",
-  "description": "AI-Powered Attendance Calculator",
-  "main": "index.html",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "description": "AI-Powered Attendance Calculator using OpenAI",
   "dependencies": {
-    "@google/generative-ai": "^0.11.3"
+    "openai": "^4.29.2"
   }
 }
