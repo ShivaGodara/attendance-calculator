@@ -6,7 +6,7 @@
     <title>AI Attendance Calculator</title>
     <style>
         :root {
-            --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #1c1e21; --primary-color: #187т7f2;
+            --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #1c1e21; --primary-color: #1877f2;
             --border-color: #dddfe2; --danger-color: #fa383e; --warning-color: #f5a623; --safe-color: #34c759;
             --shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
@@ -158,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let settings = {};
     let uploadedFile = null;
 
-    // --- NEW: TIMETABLE USES AN ARRAY TO COUNT MULTIPLE HOURS ---
     const FIXED_TIMETABLE = {
         'Monday':    ['ADVANCED PYTHON', 'CLOUD COMPUTING', 'PEER LEARNING', 'ELECTIVES', 'ELECTIVES'],
         'Tuesday':   ['MINI PROJECT', 'ARTIFICIAL INTELLIGENCE & MACHINE LEARNING', 'PEER LEARNING', 'CYBER SECURITY', 'ELECTIVES', 'CLOUD COMPUTING'],
@@ -182,7 +181,27 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsPage.classList.remove('hidden');
     };
 
-    // --- NEW: LOGIC UPDATED TO COUNT ALL OCCURRENCES IN THE ARRAY ---
+    // --- NEW HELPER FUNCTION TO COUNT ALL FUTURE CLASSES ---
+    const countFutureClasses = (subjectName) => {
+        if (!settings.endDate || !subjectName) return 0;
+        let classCount = 0;
+        const today = new Date();
+        const endDate = new Date(settings.endDate);
+        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
+
+        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+            if (holidays.includes(d.toDateString())) continue;
+            const dayName = d.toLocaleString('en-US', { weekday: 'long' });
+            const classesToday = FIXED_TIMETABLE[dayName] || [];
+            for (const subject of classesToday) {
+                if (subject.toUpperCase() === subjectName.toUpperCase()) {
+                    classCount++;
+                }
+            }
+        }
+        return classCount;
+    };
+
     const findDateForNthClass = (subjectName, neededClasses) => {
         if (!settings.endDate || !subjectName || neededClasses <= 0) return { date: null, days: Infinity };
         let classCount = 0, daysCount = 0;
@@ -193,17 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
             daysCount++;
             if (holidays.includes(d.toDateString())) continue;
-
             const dayName = d.toLocaleString('en-US', { weekday: 'long' });
             const classesToday = FIXED_TIMETABLE[dayName] || [];
-
-            // Loop through the array for the day and count matching subjects
             for (const subject of classesToday) {
                 if (subject.toUpperCase() === subjectName.toUpperCase()) {
                     classCount++;
                 }
             }
-
             if (classCount >= neededClasses) {
                 return { date: d, days: daysCount };
             }
@@ -211,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { date: null, days: Infinity };
     };
 
+    // --- UPDATED CALCULATION LOGIC WITH IMPOSSIBILITY CHECK ---
     const calculateAttendance = (card) => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
@@ -230,15 +246,28 @@ document.addEventListener('DOMContentLoaded', () => {
             status = `On Track. You can safely miss the next ${safeToMiss} classes.`;
             className = 'status-safe';
         } else {
-            const neededHrs = Math.ceil(((goalPercentage / 100) * total - attended) / (1 - (goalPercentage / 100)));
-            const projection = findDateForNthClass(subjectName, neededHrs);
-            if (projection.date) {
-                const formattedDate = projection.date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-                status = `Need ${neededHrs} more hrs → will reach ${goalPercentage}% in ~${projection.days} day(s), around ${formattedDate}`;
-                className = 'status-warning';
+            // First, check if the goal is even possible
+            const futureClasses = countFutureClasses(subjectName);
+            const maxPossibleAttended = attended + futureClasses;
+            const maxPossibleTotal = total + futureClasses;
+            const maxPossiblePercentage = maxPossibleTotal > 0 ? (maxPossibleAttended / maxPossibleTotal) * 100 : 0;
+
+            if (maxPossiblePercentage < goalPercentage) {
+                status = `Impossible to reach ${goalPercentage}%. Maximum possible is ${maxPossiblePercentage.toFixed(2)}%.`;
+                className = 'status-danger';
             } else {
-                status = `Need to attend ${neededHrs} more classes to reach ${goalPercentage}%.`;
-                className = 'status-warning';
+                // If it's possible, then calculate the date
+                const neededHrs = Math.ceil(((goalPercentage / 100) * total - attended) / (1 - (goalPercentage / 100)));
+                const projection = findDateForNthClass(subjectName, neededHrs);
+                if (projection.date) {
+                    const formattedDate = projection.date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+                    status = `Need ${neededHrs} more hrs → will reach ${goalPercentage}% in ~${projection.days} day(s), around ${formattedDate}`;
+                    className = 'status-warning';
+                } else {
+                    // This is a fallback, but the check above should catch impossibility
+                    status = `Need to attend ${neededHrs} more classes to reach ${goalPercentage}%.`;
+                    className = 'status-warning';
+                }
             }
         }
         updateCardUI(card, { percentage: currentPercentage, status, className });
