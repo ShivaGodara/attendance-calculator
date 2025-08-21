@@ -73,15 +73,12 @@
         #loading-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); justify-content: center; align-items: center; text-align: center; }
         .spinner { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* --- What If Planner Styles --- */
         #what-if-planner { margin-top: 30px; padding: 20px; border-top: 2px solid var(--border-color); }
         .what-if-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         #what-if-result { border-radius: 8px; padding: 15px; margin-top: 20px; text-align: center; }
         #what-if-result.status-safe { background-color: #eaf6ec; }
         #what-if-result.status-warning { background-color: #fff8e1; }
         #what-if-result.status-danger { background-color: #fdecea; }
-
         @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } .subject-grid { grid-template-columns: 1fr; } .controls-grid { grid-template-columns: 1fr; } .what-if-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -190,7 +187,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Page Elements ---
     const homePage = document.getElementById('home-page');
     const resultsPage = document.getElementById('results-page');
     const loadingOverlay = document.getElementById('loading-overlay');
@@ -199,8 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const aggregateStatusDisplay = document.getElementById('aggregate-status');
     const tabs = document.querySelectorAll('.tab-link');
     const tabContents = document.querySelectorAll('.tab-content');
-
-    // --- Home Page Elements ---
     const uploadAreaTimetable = document.getElementById('upload-area-timetable');
     const uploadAreaAttendance = document.getElementById('upload-area-attendance');
     const timetableUploadInput = document.getElementById('timetable-upload-input');
@@ -210,17 +204,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearTimetableBtn = document.getElementById('clear-timetable-btn');
     const clearAttendanceBtn = document.getElementById('clear-attendance-btn');
     const analyzeBtn = document.getElementById('analyze-btn');
-
-    // --- Results Page Elements ---
     const subjectsContainer = document.getElementById('subjects-container');
-    const bunkContainer = document.getElementById('bunk-cards-container'); // Corrected from bunk-content
+    const bunkContainer = document.getElementById('bunk-cards-container');
     const addSubjectBtn = document.getElementById('add-subject-btn');
     const startOverBtn = document.getElementById('start-over-btn');
     const whatIfAttendedInput = document.getElementById('what-if-attended');
     const whatIfHeldInput = document.getElementById('what-if-held');
     const whatIfResult = document.getElementById('what-if-result');
-    
-    // --- Settings Modal Elements ---
     const settingsModal = document.getElementById('settings-modal');
     const settingsBtn = document.getElementById('settings-btn');
     const closeModal = document.querySelector('.close');
@@ -258,24 +248,19 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeBtn.disabled = !(uploadedTimetableFile && uploadedAttendanceFile);
     };
     
-    // --- New "What If?" Planner Calculation ---
     const calculateWhatIf = () => {
         let totalAttended = 0, totalHeld = 0;
         document.querySelectorAll('.subject-card').forEach(card => {
             totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
             totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
         });
-
         const extraAttended = parseInt(whatIfAttendedInput.value, 10) || 0;
         const extraHeld = parseInt(whatIfHeldInput.value, 10) || 0;
-
         const whatIfAttended = totalAttended + extraAttended;
         const whatIfHeld = totalHeld + extraHeld;
-
         const aggregateGoal = settings.aggregateGoalPercentage || 75;
         const whatIfPercentage = whatIfHeld > 0 ? (whatIfAttended / whatIfHeld) * 100 : 0;
         let status = '', className = '';
-
         if (whatIfPercentage >= aggregateGoal) {
             status = `Goal of ${aggregateGoal}% is met.`;
             className = 'status-safe';
@@ -284,17 +269,13 @@ document.addEventListener('DOMContentLoaded', () => {
             status = `Need ${neededHrs} more attended classes to reach ${aggregateGoal}%.`;
             className = 'status-warning';
         }
-        
         whatIfResult.className = '';
         whatIfResult.classList.add(className);
-        whatIfResult.innerHTML = `
-            <strong>New Aggregate: ${whatIfPercentage.toFixed(2)}%</strong><br>
-            ${status}
-        `;
+        whatIfResult.innerHTML = `<strong>New Aggregate: ${whatIfPercentage.toFixed(2)}%</strong><br>${status}`;
     };
 
     const calculateBunkPlanner = () => {
-        bunkContainer.innerHTML = ''; // Clear previous results
+        bunkContainer.innerHTML = '';
         const subjectCards = document.querySelectorAll('.subject-card');
         const goalPercentage = settings.goalPercentage || 75;
         const aggregateGoalPercentage = settings.aggregateGoalPercentage || 75;
@@ -322,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bunkCard.innerHTML = `<div class="bunk-card-subject">${subjectName}</div><div class="bunk-card-details"><div class="bunk-detail"><span>For Subject Goal (${goalPercentage}%):</span><span>${subjectBufferText}</span></div><div class="bunk-detail"><span>For Aggregate Goal (${aggregateGoalPercentage}%):</span><span>${aggregateBufferText}</span></div></div>`;
             bunkContainer.appendChild(bunkCard);
         });
-        calculateWhatIf(); // Also calculate what-if when bunk planner is shown
+        calculateWhatIf();
     };
 
     const countFutureClasses = (subjectName) => {
@@ -441,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
         calculateAggregateAttendance();
         calculateWhatIf();
     };
-
+    
     const updateCardUI = (card, result) => {
         card.className = 'subject-card';
         if (result.className) card.classList.add(result.className);
