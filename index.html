@@ -130,8 +130,7 @@
                 <div id="subjects-container"></div>
             </div>
 
-            <div id="bunk-content" class="tab-content">
-                </div>
+            <div id="bunk-content" class="tab-content"></div>
 
             <div class="controls-grid">
                 <button id="start-over-btn" class="control-btn secondary-btn">Start Over</button>
@@ -237,21 +236,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Bunk Planner Calculation ---
     const calculateBunkPlanner = () => {
-        bunkContainer.innerHTML = ''; // Clear previous results
+        bunkContainer.innerHTML = '';
         const subjectCards = document.querySelectorAll('.subject-card');
         const goalPercentage = settings.goalPercentage || 75;
+        if (subjectCards.length === 0) {
+            bunkContainer.innerHTML = '<p style="text-align:center; color:#606770;">No subjects to plan.</p>';
+            return;
+        }
 
         subjectCards.forEach(card => {
             const subjectName = card.querySelector('.subject-name-input').value;
             const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
             const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
             const futureClasses = countFutureClasses(subjectName);
-            
-            // Formula: B = (A - G*T) + F * (1 - G)
-            const buffer = Math.floor(
-                (attended - (goalPercentage / 100) * total) + futureClasses * (1 - (goalPercentage / 100))
-            );
-
+            const buffer = Math.floor((attended - (goalPercentage / 100) * total) + futureClasses * (1 - (goalPercentage / 100)));
             const bunkCard = document.createElement('div');
             bunkCard.className = 'bunk-card status-safe';
             let statusText = '';
@@ -262,10 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusText = `<span style="color: var(--danger-color);">Cannot miss any more classes</span>`;
             }
 
-            bunkCard.innerHTML = `
-                <div class="bunk-card-subject">${subjectName}</div>
-                <div class="bunk-card-status">${statusText}</div>
-            `;
+            bunkCard.innerHTML = `<div class="bunk-card-subject">${subjectName}</div><div class="bunk-card-status">${statusText}</div>`;
             bunkContainer.appendChild(bunkCard);
         });
     };
@@ -405,6 +400,11 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
         calculateAggregateAttendance();
+
+        // --- THE FIX: Recalculate Bunk Planner if it's the active tab ---
+        if (document.querySelector('.tab-link[data-tab="bunk"]').classList.contains('active')) {
+            calculateBunkPlanner();
+        }
     };
     const loadSettings = () => {
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
@@ -483,16 +483,13 @@ document.addEventListener('DOMContentLoaded', () => {
         tab.addEventListener('click', () => {
             tabs.forEach(item => item.classList.remove('active'));
             tab.classList.add('active');
-            const target = document.querySelector(tab.dataset.tab);
             tabContents.forEach(content => content.classList.remove('active'));
             document.getElementById(tab.dataset.tab + '-content').classList.add('active');
-            
             if (tab.dataset.tab === 'bunk') {
                 calculateBunkPlanner();
             }
         });
     });
-
     uploadAreaTimetable.addEventListener('click', (e) => { if (e.detail === 3) timetableUploadInput.click(); });
     timetableUploadInput.addEventListener('change', (e) => handleTimetableFile(e.target.files[0]));
     uploadAreaAttendance.addEventListener('click', (e) => { if (e.detail === 3) attendanceUploadInput.click(); });
