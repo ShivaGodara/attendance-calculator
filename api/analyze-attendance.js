@@ -25,17 +25,15 @@ module.exports = async (req, res) => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-      You are an expert at analyzing and consolidating data from a student's attendance summary screenshot.
+      You are an expert at analyzing and consolidating data from a student's attendance portal screenshot.
       For each distinct "Subject Name", you must combine its "Theory" and "Practical" rows into a single entry.
-
       Your task is to:
       1. Identify each unique subject.
       2. For each subject, find its "Theory" and "Practical" rows.
       3. Sum the values from the "Conducted" column for both rows to get the total classes held.
       4. Sum the values from the "Present" column for both rows to get the total classes attended.
-      5. Create a single JSON object for that subject.
-      
-      The final output must be a clean JSON array. Each object must have three keys: "name" (in ALL CAPS), "attended" (integer), and "total" (integer).
+      5. Create a single JSON object for that subject with the combined totals.
+      The final output must be a clean JSON array. Each object must have three keys: "name", "attended", and "total".
       Process all subjects. Do not output any text, explanations, or markdown formatting. Only output the final JSON array.
     `;
     
@@ -52,7 +50,7 @@ module.exports = async (req, res) => {
     res.status(200).json(jsonData);
 
   } catch (error) {
-    console.error("Error processing attendance summary:", error);
+    console.error("Error processing request:", error);
     res.status(500).json({ error: "Failed to analyze attendance image.", details: error.message });
   }
 };
