@@ -64,7 +64,6 @@ header h1 {
     display: none !important;
 }
 
-/* --- Home Page Styles --- */
 #home-page {
     text-align: center;
 }
@@ -72,7 +71,7 @@ header h1 {
 .upload-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 25px;
+    gap: 20px;
     margin-bottom: 20px;
 }
 
@@ -82,71 +81,62 @@ header h1 {
 }
 
 .upload-wrapper h4 {
-    color: #4b4f56;
-    margin-bottom: 12px;
-    font-weight: 600;
+    color: #606770;
+    margin-bottom: 10px;
 }
 
 .upload-area {
     background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 25px;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.2s;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .upload-area:hover {
     border-color: var(--primary-color);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
 }
 
 .upload-area.uploaded {
     border-color: var(--safe-color);
     border-style: solid;
-    background-color: #f8fff9;
 }
 
 .upload-area p {
-    margin: 15px 0 0 0;
-    font-size: 1em;
-    font-weight: 500;
+    margin: 0;
+    font-size: 1.1em;
     color: #606770;
 }
 
 .upload-area .upload-icon {
-    width: 64px;
-    height: 64px;
+    font-size: 3em;
+    color: var(--primary-color);
+    margin-bottom: 10px;
 }
 
 .upload-status-wrapper {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 12px;
-    min-height: 28px;
+    margin-top: 10px;
 }
 
 .upload-status {
     font-weight: 500;
     font-size: 0.9em;
-    color: #606770;
-    max-width: 200px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .upload-status.success {
     color: var(--safe-color);
-    font-weight: 600;
 }
 
 .clear-btn {
@@ -158,39 +148,27 @@ header h1 {
     margin-left: 8px;
     line-height: 1;
     padding: 0;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-}
-
-.clear-btn:hover {
-    opacity: 1;
 }
 
 .upload-wrapper input[type="file"] {
     display: none;
 }
 
-.instructions {
-    margin-top: 30px;
-    padding: 20px;
-    background-color: var(--card-bg);
-    border-radius: 8px;
+#leave-files-list {
+    font-size: 0.9em;
     text-align: left;
-    line-height: 1.6;
-    border: 1px solid var(--border-color);
+    margin-top: 10px;
+    padding-left: 10px;
 }
 
-.instructions h3 {
-    margin-top: 0;
-    color: var(--primary-color);
+#leave-files-list li {
+    margin-bottom: 5px;
+    list-style-type: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.instructions ul {
-    padding-left: 20px;
-    margin-bottom: 0;
-}
-
-/* --- Results Page Styles --- */
 .tabs {
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 20px;
