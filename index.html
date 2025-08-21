@@ -648,10 +648,18 @@
         const handleFile = (file, type) => {
             if (type === 'timetable') uploadedTimetableFile = file;
             if (type === 'attendance') uploadedAttendanceFile = file;
+            if (type === 'timetable' || type === 'attendance') {
+                const input = document.getElementById(`${type}-upload-input`);
+                if (input) input.value = '';
+            }
             checkUploads();
         };
+
         const handleFiles = (files, type) => {
-            if (type === 'leaves') uploadedLeaveFiles = Array.from(files);
+            if (type === 'leaves') {
+                uploadedLeaveFiles = Array.from(files);
+                leavesUploadInput.value = '';
+            }
             checkUploads();
         };
 
@@ -672,7 +680,9 @@
                 allLeaveData = fetchedLeaveData;
                 allSubjectsData = attendanceData;
 
-                saveData();
+                // BUG FIX: The incorrect saveData() call was removed from here.
+                // Data is now saved correctly after cards are created.
+
                 populateAllCards(allSubjectsData);
                 showResultsPage();
             } catch (error) {
@@ -713,8 +723,8 @@
 
         // --- CORE CALCULATION LOGIC ---
         const getSubjectLeaveCount = (subjectName, leaveType) => {
-            if (!allLeaveData || !allLeaveData[leaveType]) return 0;
-            const codePattern = /\(([^)]+)\)/; // Extracts text in parentheses
+            if (!allLeaveData || !allLeaveData[leaveType] || !subjectName) return 0;
+            const codePattern = /\(([^)]+)\)/;
             const match = subjectName.match(codePattern);
             if (!match) return 0;
             const subjectCode = match[1];
@@ -726,12 +736,13 @@
             let classCount = 0;
             const today = new Date();
             const endDate = new Date(settings.endDate);
+            const subjectNameUpper = subjectName.split('(')[0].trim().toUpperCase();
             for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
                 if (isHoliday(d)) continue;
                 const dayName = d.toLocaleString('en-US', { weekday: 'long' });
                 const classesToday = settings.timetable[dayName] || [];
                 for (const subject of classesToday) {
-                    if (subject.toUpperCase() === subjectName.split('(')[0].trim().toUpperCase()) classCount++;
+                    if (subject.toUpperCase() === subjectNameUpper) classCount++;
                 }
             }
             return classCount;
@@ -742,13 +753,14 @@
             let classCount = 0, daysCount = 0;
             const today = new Date();
             const endDate = new Date(settings.endDate);
+            const subjectNameUpper = subjectName.split('(')[0].trim().toUpperCase();
             for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
                 daysCount++;
                 if (isHoliday(d)) continue;
                 const dayName = d.toLocaleString('en-US', { weekday: 'long' });
                 const classesToday = settings.timetable[dayName] || [];
                 for (const subject of classesToday) {
-                    if (subject.toUpperCase() === subjectName.split('(')[0].trim().toUpperCase()) classCount++;
+                    if (subject.toUpperCase() === subjectNameUpper) classCount++;
                 }
                 if (classCount >= neededClasses) return { date: d, days: daysCount };
             }
@@ -828,7 +840,6 @@
         };
         
         const calculateBunkPlanner = () => {
-             if (!bunkContainer) return;
              bunkContainer.innerHTML = '';
              const subjectCards = document.querySelectorAll('.subject-card');
              if (subjectCards.length === 0) return;
@@ -870,7 +881,7 @@
              } else {
                  medicalLeaveSimulator.classList.add('hidden');
              }
-             medicalLeaveResult.innerHTML = ''; // Reset simulation result on recalculation
+             medicalLeaveResult.innerHTML = '';
         };
 
         const simulateWithMedicalLeaves = () => {
@@ -884,8 +895,12 @@
              });
 
              const projectedTotal = totalHeld + totalFuture;
+             if (projectedTotal === 0) {
+                 medicalLeaveResult.innerHTML = `<span style="color:var(--warning-color);">Cannot simulate without total classes.</span>`;
+                 return;
+             }
              const projectedAttended_noMedical = totalAttended + totalFuture;
-             const projectedPercentage_noMedical = projectedTotal > 0 ? (projectedAttended_noMedical / projectedTotal) * 100 : 0;
+             const projectedPercentage_noMedical = (projectedAttended_noMedical / projectedTotal) * 100;
 
              if (projectedPercentage_noMedical < 75) {
                  medicalLeaveResult.innerHTML = `<span style="color:var(--danger-color);">Cannot apply medical leaves. Your projected final attendance is ${projectedPercentage_noMedical.toFixed(2)}%, which is below the 75% minimum requirement.</span>`;
@@ -893,12 +908,18 @@
              }
 
              const projectedAttended_withMedical = projectedAttended_noMedical + totalMedical;
-             const projectedPercentage_withMedical = projectedTotal > 0 ? (projectedAttended_withMedical / projectedTotal) * 100 : 0;
+             const projectedPercentage_withMedical = (projectedAttended_withMedical / projectedTotal) * 100;
              medicalLeaveResult.innerHTML = `<span style="color:var(--safe-color);">Your projected final attendance with medical leaves applied will be <strong>${projectedPercentage_withMedical.toFixed(2)}%</strong>.</span>`;
         };
-
-        const calculateWhatIf = () => { /* This function remains unchanged */ };
         
+        const updateAllCalculations = () => {
+            saveData();
+            calculateAggregateAttendance();
+            if (resultsPage.querySelector('.tab-link.active').dataset.tab === 'bunk') {
+                calculateBunkPlanner();
+            }
+        };
+
         // --- UI & DATA CREATION ---
         const createSubjectCard = (data) => {
             const card = document.createElement('div');
@@ -914,11 +935,13 @@
             card.addEventListener('input', () => calculateAttendance(card));
             card.querySelector('.remove-btn').addEventListener('click', () => { card.remove(); updateAllCalculations(); });
             subjectsContainer.appendChild(card);
-            if (data.attended || data.total) calculateAttendance(card);
+            if (data.attended !== undefined || data.total !== undefined) calculateAttendance(card);
         };
+
         const populateAllCards = (subjectsData) => {
             subjectsContainer.innerHTML = '';
             subjectsData.forEach(createSubjectCard);
+            // Initial aggregate calculation after all cards are created and calculated
             calculateAggregateAttendance();
         };
         const updateCardUI = (card, result) => {
@@ -941,9 +964,10 @@
         };
         const loadData = () => {
             const data = JSON.parse(localStorage.getItem('attendanceData'));
-            if (data && data.subjects) {
+            if (data && data.subjects && data.subjects.length > 0) {
                 allSubjectsData = data.subjects;
                 allLeaveData = data.leaves;
+                settings.timetable = JSON.parse(localStorage.getItem('attendanceSettings'))?.timetable;
                 populateAllCards(allSubjectsData);
                 showResultsPage();
             }
@@ -999,12 +1023,10 @@
                 if (tab.dataset.tab === 'bunk') calculateBunkPlanner();
             });
         });
-        settingsBtn.addEventListener('click', () => { loadSettings(); settingsModal.style.display = 'block'; });
+        settingsBtn.addEventListener('click', () => { settingsModal.style.display = 'block'; });
         closeModal.addEventListener('click', () => settingsModal.style.display = 'none');
         window.addEventListener('click', (e) => { if (e.target == settingsModal) settingsModal.style.display = 'none'; });
         saveSettingsBtn.addEventListener('click', saveSettings);
-        whatIfAttendedInput.addEventListener('input', calculateWhatIf);
-        whatIfHeldInput.addEventListener('input', calculateWhatIf);
         simulateMedicalBtn.addEventListener('click', simulateWithMedicalLeaves);
 
         // --- INITIAL LOAD ---
@@ -1015,3 +1037,4 @@
 </script>
 </body>
 </html>
+
