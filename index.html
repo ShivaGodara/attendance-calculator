@@ -8,16 +8,32 @@
         :root {
             --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #1c1e21; --primary-color: #1877f2;
             --border-color: #dddfe2; --danger-color: #fa383e; --warning-color: #f5a623; --safe-color: #34c759;
-            --shadow: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; }
-        .container { max-width: 800px; margin: 0 auto; }
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { max-width: 800px; width: 100%; margin: 0 auto; }
         header { text-align: center; margin-bottom: 24px; }
         header h1 { color: var(--primary-color); margin-bottom: 8px; }
+        .control-btn { background-color: var(--primary-color); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: 600; text-align: center; transition: all 0.2s; font-size: 1.1em; }
+        .control-btn:hover { background-color: #166fe5; }
+        .control-btn:disabled { background-color: #a0bdf1; cursor: not-allowed; }
+        .hidden { display: none !important; }
+
+        /* --- Home Page Styles --- */
+        #home-page { text-align: center; }
+        #upload-area { background-color: var(--card-bg); border: 2px dashed var(--border-color); border-radius: 12px; padding: 40px; margin-bottom: 20px; cursor: pointer; transition: border-color 0.2s; }
+        #upload-area:hover { border-color: var(--primary-color); }
+        #upload-area p { margin: 0; font-size: 1.1em; color: #606770; }
+        #upload-area .upload-icon { font-size: 3em; color: var(--primary-color); margin-bottom: 10px; }
+        #file-preview { margin-top: 20px; }
+        #preview-image { max-width: 100%; max-height: 200px; border-radius: 8px; box-shadow: var(--shadow); }
+        #file-name { font-weight: 500; margin-top: 10px; }
+        #screenshot-upload-input { display: none; }
+
+        /* --- Results Page Styles --- */
         .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .control-btn { background-color: var(--card-bg); color: var(--primary-color); border: 1px solid var(--primary-color); padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; text-align: center; transition: all 0.2s; }
-        .control-btn:hover { background-color: var(--primary-color); color: white; }
-        .control-btn input[type="file"] { display: none; }
+        .secondary-btn { background-color: var(--card-bg); color: var(--primary-color); border: 1px solid var(--primary-color); }
+        .secondary-btn:hover { background-color: #f0f2f5; }
         .subject-card { background-color: var(--card-bg); border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border-left: 5px solid var(--border-color); transition: border-left 0.3s; }
         .subject-card.status-safe { border-left-color: var(--safe-color); }
         .subject-card.status-warning { border-left-color: var(--warning-color); }
@@ -33,7 +49,6 @@
         .status-warning .result-display { background-color: #fff8e1; color: #b79000; }
         .status-danger .result-display { background-color: #fdecea; color: var(--danger-color); }
         .remove-btn { color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 8px; font-size: 0.9em; float: right; }
-        .add-subject-btn { width: 100%; }
         #settings-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
         .modal-content h2 { margin-top: 0; }
@@ -54,21 +69,39 @@
     </div>
 
     <div class="container">
-        <header>
-            <h1>AI Attendance Calculator</h1>
-            <p>Calculate current attendance and project your future status.</p>
-        </header>
-
-        <div class="controls-grid">
-            <label for="screenshot-upload" class="control-btn">📷 Upload Screenshot</label>
-            <input type="file" id="screenshot-upload" accept="image/*">
-            <button id="settings-btn" class="control-btn">⚙️ Settings</button>
+        <!-- =========== HOME PAGE =========== -->
+        <div id="home-page">
+            <header>
+                <h1>AI Attendance Calculator</h1>
+                <p>Upload a screenshot of your attendance portal to get started.</p>
+            </header>
+            <div id="upload-area">
+                <div class="upload-icon">📷</div>
+                <p>Click to browse or drag & drop your screenshot</p>
+            </div>
+            <input type="file" id="screenshot-upload-input" accept="image/*">
+            <div id="file-preview" class="hidden">
+                <img id="preview-image" src="#" alt="Screenshot Preview">
+                <p id="file-name"></p>
+            </div>
+            <button id="analyze-btn" class="control-btn" disabled>Analyze Screenshot</button>
         </div>
 
-        <div id="subjects-container"></div>
-        <button id="add-subject-btn" class="control-btn add-subject-btn">➕ Add Subject Manually</button>
+        <!-- =========== RESULTS PAGE =========== -->
+        <div id="results-page" class="hidden">
+            <header>
+                <h1>Your Attendance Analysis</h1>
+            </header>
+            <div class="controls-grid">
+                <button id="start-over-btn" class="control-btn secondary-btn">Start Over</button>
+                <button id="settings-btn" class="control-btn secondary-btn">⚙️ Settings</button>
+            </div>
+            <div id="subjects-container"></div>
+            <button id="add-subject-btn" class="control-btn secondary-btn" style="width: 100%; margin-top: 10px;">➕ Add Subject Manually</button>
+        </div>
     </div>
 
+    <!-- =========== SETTINGS MODAL (for Results Page) =========== -->
     <div id="settings-modal">
         <div class="modal-content">
             <span class="close" style="float:right; cursor:pointer; font-size: 1.5em;">&times;</span>
@@ -77,7 +110,6 @@
                 <label for="end-date">Semester End Date</label>
                 <input type="date" id="end-date">
             </div>
-            
             <h3 style="margin-top: 20px;">Holidays</h3>
             <div class="input-group" style="display:flex; flex-direction: row; gap: 10px;">
                 <input type="date" id="holiday-date" style="flex-grow: 1;">
@@ -90,13 +122,25 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
+    // --- Page Elements ---
+    const homePage = document.getElementById('home-page');
+    const resultsPage = document.getElementById('results-page');
+    const loadingOverlay = document.getElementById('loading-overlay');
+
+    // --- Home Page Elements ---
+    const uploadArea = document.getElementById('upload-area');
+    const uploadInput = document.getElementById('screenshot-upload-input');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const filePreview = document.getElementById('file-preview');
+    const previewImage = document.getElementById('preview-image');
+    const fileNameDisplay = document.getElementById('file-name');
+
+    // --- Results Page Elements ---
     const subjectsContainer = document.getElementById('subjects-container');
     const addSubjectBtn = document.getElementById('add-subject-btn');
-    const uploadInput = document.getElementById('screenshot-upload');
-    const loadingOverlay = document.getElementById('loading-overlay');
+    const startOverBtn = document.getElementById('start-over-btn');
     
-    // Settings Modal Elements
+    // --- Settings Modal Elements ---
     const settingsModal = document.getElementById('settings-modal');
     const settingsBtn = document.getElementById('settings-btn');
     const closeModal = document.querySelector('.close');
@@ -108,10 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const TARGET_PERCENTAGE = 75;
     let settings = {};
+    let uploadedFile = null;
 
-    // --- FIXED WEEKLY TIMETABLE ---
-    // This timetable is based on your provided image.
-    // Subject names are written in full to match the attendance sheet.
     const FIXED_TIMETABLE = {
         'Monday': 'ADVANCED PYTHON, CLOUD COMPUTING',
         'Tuesday': 'MINI PROJECT, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING, CYBER SECURITY, CLOUD COMPUTING',
@@ -121,34 +163,35 @@ document.addEventListener('DOMContentLoaded', () => {
         'Saturday': 'CYBER SECURITY, MINI PROJECT, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING'
     };
 
-    const findDateForNthClass = (subjectName, neededClasses) => {
-        if (!settings.endDate || !subjectName || neededClasses <= 0) {
-            return { date: null, days: Infinity };
-        }
-        
-        let classCount = 0;
-        let daysCount = 0;
-        const today = new Date();
-        const endDate = new Date(settings.endDate);
-        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
-        const timetable = FIXED_TIMETABLE; // Always use the fixed timetable
+    // --- Page Navigation ---
+    const showHomePage = () => {
+        resultsPage.classList.add('hidden');
+        homePage.classList.remove('hidden');
+        filePreview.classList.add('hidden');
+        analyzeBtn.disabled = true;
+        uploadedFile = null;
+        uploadInput.value = ''; // Reset file input
+    };
 
+    const showResultsPage = () => {
+        homePage.classList.add('hidden');
+        resultsPage.classList.remove('hidden');
+    };
+
+    // --- Core Logic (Calculations, UI updates, etc.) ---
+    const findDateForNthClass = (subjectName, neededClasses) => {
+        if (!settings.endDate || !subjectName || neededClasses <= 0) return { date: null, days: Infinity };
+        let classCount = 0, daysCount = 0;
+        const today = new Date(), endDate = new Date(settings.endDate);
+        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
         for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
             daysCount++;
             if (holidays.includes(d.toDateString())) continue;
-
             const dayName = d.toLocaleString('en-US', { weekday: 'long' });
-            const timetableEntry = timetable[dayName] || '';
-
-            if (timetableEntry.toUpperCase().includes(subjectName.toUpperCase())) {
-                classCount++;
-            }
-
-            if (classCount >= neededClasses) {
-                return { date: d, days: daysCount };
-            }
+            const timetableEntry = FIXED_TIMETABLE[dayName] || '';
+            if (timetableEntry.toUpperCase().includes(subjectName.toUpperCase())) classCount++;
+            if (classCount >= neededClasses) return { date: d, days: daysCount };
         }
-        
         return { date: null, days: Infinity };
     };
 
@@ -156,16 +199,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
         const subjectName = card.querySelector('.subject-name-input').value;
-
         if (total <= 0) {
             updateCardUI(card, { percentage: 0, status: "Enter valid numbers.", className: '' });
             return;
         }
-
         const currentPercentage = (attended / total) * 100;
-        let status = '';
-        let className = '';
-
+        let status = '', className = '';
         if (currentPercentage >= TARGET_PERCENTAGE) {
             const safeToMiss = Math.floor(attended / (TARGET_PERCENTAGE / 100) - total);
             status = `On Track. You can safely miss the next ${safeToMiss} classes.`;
@@ -173,11 +212,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const neededHrs = Math.ceil(((TARGET_PERCENTAGE / 100) * total - attended) / (1 - (TARGET_PERCENTAGE / 100)));
             const projection = findDateForNthClass(subjectName, neededHrs);
-
             if (projection.date) {
-                const formattedDate = projection.date.toLocaleDateString('en-US', { 
-                    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' 
-                });
+                const formattedDate = projection.date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
                 status = `Need ${neededHrs} more hrs → will reach 75% in ~${projection.days} day(s), around ${formattedDate}`;
                 className = 'status-warning';
             } else {
@@ -185,7 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 className = 'status-warning';
             }
         }
-        
         updateCardUI(card, { percentage: currentPercentage, status, className });
         saveData();
     };
@@ -193,11 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateCardUI = (card, result) => {
         card.className = 'subject-card';
         if (result.className) card.classList.add(result.className);
-        
         const resultDisplay = card.querySelector('.result-display');
-        resultDisplay.innerHTML = `
-            <div class="percentage">${result.percentage.toFixed(2)}%</div>
-            <div class="status-message">${result.status}</div>`;
+        resultDisplay.innerHTML = `<div class="percentage">${result.percentage.toFixed(2)}%</div><div class="status-message">${result.status}</div>`;
     };
 
     const createSubjectCard = (data = { name: '', attended: '', total: '' }) => {
@@ -206,15 +238,13 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = `
             <button class="remove-btn">&times;</button>
             <div class="subject-grid">
-                <div class="input-group"><label>Subject Name</label><input type="text" class="subject-name-input" placeholder="e.g., Physics" value="${data.name}"></div>
+                <div class="input-group"><label>Subject Name</label><input type="text" class="subject-name-input" value="${data.name}"></div>
                 <div class="input-group"><label>Attended</label><input type="number" class="attended-input" min="0" value="${data.attended}"></div>
                 <div class="input-group"><label>Total Held</label><input type="number" class="total-input" min="0" value="${data.total}"></div>
             </div>
             <div class="result-display"><div class="status-message">Enter values to calculate.</div></div>`;
-        
         card.addEventListener('input', () => calculateAttendance(card));
         card.querySelector('.remove-btn').addEventListener('click', () => { card.remove(); saveData(); });
-        
         subjectsContainer.appendChild(card);
         if(data.attended || data.total) calculateAttendance(card);
     };
@@ -233,31 +263,18 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('attendanceData', JSON.stringify(subjects));
     };
 
-    const loadData = () => {
-        const data = JSON.parse(localStorage.getItem('attendanceData'));
-        if (data && data.length > 0) populateAllCards(data);
-    };
-    
     const saveSettings = () => {
-        // Timetable is no longer saved, as it is fixed. We only save end date and holidays.
         const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
-        
-        settings = { 
-            endDate: endDateInput.value, 
-            holidays: holidays,
-            timetable: FIXED_TIMETABLE // Always use the fixed timetable
-        };
+        settings = { endDate: endDateInput.value, holidays, timetable: FIXED_TIMETABLE };
         localStorage.setItem('attendanceSettings', JSON.stringify({ endDate: settings.endDate, holidays: settings.holidays }));
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
     };
 
     const loadSettings = () => {
-        // Load only end date and holidays. Timetable is always fixed.
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
         settings = savedSettings || { holidays: [] };
-        settings.timetable = FIXED_TIMETABLE; // Crucially, set the fixed timetable here.
-
+        settings.timetable = FIXED_TIMETABLE;
         endDateInput.value = settings.endDate || '';
         holidaysList.innerHTML = '';
         (settings.holidays || []).forEach(addHolidayToList);
@@ -267,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!date) return;
         const existingDates = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
         if (existingDates.includes(date)) return;
-
         const li = document.createElement('li');
         li.dataset.date = date;
         li.textContent = new Date(date + 'T00:00:00').toDateString();
@@ -279,37 +295,55 @@ document.addEventListener('DOMContentLoaded', () => {
         holidaysList.appendChild(li);
     };
 
-    const handleFileUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
+    const handleFileUpload = async () => {
+        if (!uploadedFile) return;
         loadingOverlay.style.display = 'flex';
         const reader = new FileReader();
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(uploadedFile);
         reader.onload = async () => {
             const base64Image = reader.result.split(',')[1];
             try {
                 const response = await fetch('/api/analyze-attendance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: base64Image, mimeType: file.type })
+                    body: JSON.stringify({ image: base64Image, mimeType: uploadedFile.type })
                 });
                 if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
                 const data = await response.json();
                 populateAllCards(data);
                 saveData();
+                showResultsPage(); // Navigate to results page on success
             } catch (error) {
                 console.error("Error analyzing screenshot:", error);
                 alert("Could not analyze screenshot. Please check the format or try again.");
             } finally {
                 loadingOverlay.style.display = 'none';
-                event.target.value = '';
             }
         };
     };
 
-    // --- EVENT LISTENERS ---
+    const handleFileSelect = (file) => {
+        if (file && file.type.startsWith('image/')) {
+            uploadedFile = file;
+            previewImage.src = URL.createObjectURL(file);
+            fileNameDisplay.textContent = file.name;
+            filePreview.classList.remove('hidden');
+            analyzeBtn.disabled = false;
+        }
+    };
+
+    // --- Event Listeners ---
+    uploadArea.addEventListener('click', () => uploadInput.click());
+    uploadInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    uploadArea.addEventListener('drop', (e) => handleFileSelect(e.dataTransfer.files[0]));
+    
+    analyzeBtn.addEventListener('click', handleFileUpload);
+    startOverBtn.addEventListener('click', showHomePage);
     addSubjectBtn.addEventListener('click', () => createSubjectCard());
-    uploadInput.addEventListener('change', handleFileUpload);
+    
     settingsBtn.addEventListener('click', () => {
         loadSettings();
         settingsModal.style.display = 'block';
@@ -322,9 +356,8 @@ document.addEventListener('DOMContentLoaded', () => {
         holidayDateInput.value = '';
     });
 
-    // --- INITIAL LOAD ---
+    // --- Initial Load ---
     loadSettings();
-    loadData();
 });
 </script>
 </body>
