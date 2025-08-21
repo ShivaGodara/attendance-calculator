@@ -8,21 +8,18 @@ function fileToGenerativePart(buffer, mimeType) {
   };
 }
 
-// Helper function to process a single image
 async function processImage(imagePart) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const prompt = `
       You are an AI assistant that extracts leave data from a student's "Absence Details" screenshot.
-      Your task is to identify subjects by their subject code (e.g., BCA301-5) and count the number of leave hours associated with them based on color coding mentioned in a legend.
+      Your task is to identify subjects by their subject code (e.g., BCA301-5) and count the number of leave hours associated with them based on color coding. The legend indicates "Co-curricular Leave" is green and "Medical Leave" is orange.
 
-      IMPORTANT RULES:
-      1. Scan the image for a legend indicating "Co-curricular Leave" (green) and "Medical Leave" (orange).
-      2. Identify each unique subject code in the log.
-      3. For each subject code, count the total hours from the "Total" column on the far right of its row.
-      4. Determine if the subject code or its row is marked green for Co-curricular leave or orange for Medical leave.
-      5. Return a JSON object where keys are the subject codes. Each value should be an object containing 'cc_leaves' and 'medical_leaves' hours.
-      6. If a subject has no leaves of a certain type, set its value to 0. For example: {"BCA301-5": {"cc_leaves": 4, "medical_leaves": 0}, "BCA304C-5": {"cc_leaves": 0, "medical_leaves": 2}}.
-      7. Only output the raw JSON object. Do not include any other text or markdown formatting.
+      RULES:
+      1. Scan the image for subject codes that are colored green or orange.
+      2. For each colored subject code, find its corresponding row and extract the number from the "Total" column on the far right.
+      3. Return a JSON object where keys are the subject codes. Each value should be an object containing 'cc_leaves' (for green) and 'medical_leaves' (for orange) hours.
+      4. If a subject has no leaves of a certain type, set its value to 0. Example: {"BCA301-5": {"cc_leaves": 4, "medical_leaves": 0}, "BCA304C-5": {"cc_leaves": 0, "medical_leaves": 2}}.
+      5. Only output the raw JSON object. Do not include any other text or markdown formatting.
     `;
 
     const result = await model.generateContent([prompt, imagePart]);
@@ -38,7 +35,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { images } = req.body; // Expect an array of images
+    const { images } = req.body;
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "Image data array is required." });
     }
@@ -50,7 +47,6 @@ module.exports = async (req, res) => {
         const imagePart = fileToGenerativePart(imageBuffer, imageData.mimeType);
         const leavesData = await processImage(imagePart);
 
-        // Aggregate results from multiple screenshots
         for (const subjectCode in leavesData) {
             if (!aggregatedLeaves[subjectCode]) {
                 aggregatedLeaves[subjectCode] = { cc_leaves: 0, medical_leaves: 0 };
