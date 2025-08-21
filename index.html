@@ -73,7 +73,6 @@
         .remove-btn { color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 8px; font-size: 0.9em; float: right; }
         #settings-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 8px; }
-        #holidays-list { list-style-type: none; padding: 0; margin-top: 10px;}
         #loading-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); justify-content: center; align-items: center; text-align: center; }
         .spinner { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -131,7 +130,7 @@
                     <li>Upload clean, uncropped screenshots of your weekly timetable and your latest attendance report.</li>
                     <li>You can **paste** images from your clipboard, **drag & drop** files, or **triple-click** a box to browse files.</li>
                     <li>Click **Analyze** to get your detailed attendance report and bunk planner!</li>
-                    <li>Use the **Settings** on the results page to set your goals and add holidays for accurate predictions.</li>
+                    <li>Use the **Settings** on the results page to set your goals and end date for accurate predictions. Holidays are now calculated automatically!</li>
                 </ul>
             </div>
         </div>
@@ -193,21 +192,11 @@
                 <label for="end-date">Semester End Date</label>
                 <input type="date" id="end-date">
             </div>
-            <h3 style="margin-top: 20px;">Holidays</h3>
-            <div class="input-group" style="display:flex; flex-direction: row; gap: 10px; align-items: flex-end;">
-                <div style="flex-grow: 1;"><label for="holiday-date">Add Holiday</label><input type="date" id="holiday-date"></div>
-                <button id="add-holiday-btn" class="control-btn" style="padding: 8px;">Add</button>
-            </div>
-            <ul id="holidays-list"></ul>
             <button id="save-settings-btn" class="control-btn" style="width: 100%; margin-top: 20px;">Save Settings</button>
         </div>
     </div>
 
 <script>
-    // This script is identical to the last Gemini version provided.
-    // All functions like calculateBunkPlanner, calculateAttendance, etc., are included.
-    // It makes fetch calls to /api/... endpoints and does not include the API key input.
-    // The full script is omitted here for brevity but is assumed to be the one from the last Gemini response.
 document.addEventListener('DOMContentLoaded', () => {
     // All element references
     const homePage = document.getElementById('home-page');
@@ -240,9 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = document.querySelector('.close');
     const saveSettingsBtn = document.getElementById('save-settings-btn');
     const endDateInput = document.getElementById('end-date');
-    const holidayDateInput = document.getElementById('holiday-date');
-    const addHolidayBtn = document.getElementById('add-holiday-btn');
-    const holidaysList = document.getElementById('holidays-list');
     const goalPercentageInput = document.getElementById('goal-percentage');
     const aggregateGoalPercentageInput = document.getElementById('aggregate-goal-percentage');
     
@@ -250,6 +236,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let uploadedTimetableFile = null;
     let uploadedAttendanceFile = null;
     
+    // --- NEW: Hardcoded Holiday Data ---
+    const FIXED_HOLIDAYS = new Set([
+        '2025-08-27', '2025-09-05', '2025-10-01', '2025-10-02', '2025-10-07', 
+        '2025-10-20', '2025-10-22', '2025-11-01', '2025-11-08', '2026-03-20', 
+        '2026-03-21', '2026-03-31', '2026-04-03', '2026-04-14', '2026-04-20', 
+        '2026-05-01', '2026-05-27'
+    ]);
+
+    // --- NEW: Helper function to check for the third Saturday ---
+    const isThirdSaturday = (date) => {
+        const dayOfMonth = date.getDate();
+        const dayOfWeek = date.getDay(); // Sunday = 0, Saturday = 6
+        return dayOfWeek === 6 && dayOfMonth >= 15 && dayOfMonth <= 21;
+    };
+
+    const isHoliday = (date) => {
+        const dateString = date.toISOString().slice(0, 10); // Format as YYYY-MM-DD
+        return FIXED_HOLIDAYS.has(dateString) || isThirdSaturday(date);
+    };
+
     const showHomePage = () => {
         resultsPage.classList.add('hidden');
         homePage.classList.remove('hidden');
@@ -282,7 +288,6 @@ document.addEventListener('DOMContentLoaded', () => {
             bunkContainer.innerHTML = '<p style="text-align:center; color:#606770;">No subjects to plan.</p>';
             return;
         }
-
         let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
         subjectCards.forEach(card => {
             totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
@@ -290,14 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
             totalFutureClasses += countFutureClasses(card.querySelector('.subject-name-input').value);
         });
         const aggregateBuffer = Math.floor((totalAttended - (aggregateGoalPercentage / 100) * totalHeld) + totalFutureClasses * (1 - (aggregateGoalPercentage / 100)));
-        
         aggregateBunkSummary.className = '';
-        const aggregateBufferText = (aggregateBuffer >= 0)
-            ? `<span style="color: var(--safe-color);">Can miss ${aggregateBuffer} total hr(s)</span>`
-            : `<span style="color: var(--danger-color);">Cannot miss any more classes</span>`;
+        const aggregateBufferText = (aggregateBuffer >= 0) ? `<span style="color: var(--safe-color);">Can miss ${aggregateBuffer} total hr(s)</span>` : `<span style="color: var(--danger-color);">Cannot miss any more classes</span>`;
         aggregateBunkSummary.innerHTML = `For Aggregate Goal (${aggregateGoalPercentage}%): ${aggregateBufferText}`;
         aggregateBunkSummary.classList.add(aggregateBuffer >= 0 ? 'status-safe' : 'status-danger');
-
         subjectCards.forEach(card => {
             const subjectName = card.querySelector('.subject-name-input').value;
             const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
@@ -344,9 +345,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let classCount = 0;
         const today = new Date();
         const endDate = new Date(settings.endDate);
-        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
         for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-            if (holidays.includes(d.toDateString())) continue;
+            if (isHoliday(d)) continue; // Use the new holiday checker
             const dayName = d.toLocaleString('en-US', { weekday: 'long' });
             const classesToday = settings.timetable[dayName] || [];
             for (const subject of classesToday) {
@@ -361,10 +361,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let classCount = 0, daysCount = 0;
         const today = new Date();
         const endDate = new Date(settings.endDate);
-        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
         for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
             daysCount++;
-            if (holidays.includes(d.toDateString())) continue;
+            if (isHoliday(d)) continue; // Use the new holiday checker
             const dayName = d.toLocaleString('en-US', { weekday: 'long' });
             const classesToday = settings.timetable[dayName] || [];
             for (const subject of classesToday) {
@@ -377,12 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const calculateAggregateAttendance = () => {
         let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
-        const subjectCards = document.querySelectorAll('.subject-card');
-        if (subjectCards.length === 0) {
-            updateAggregateUI({ percentage: 0, status: "Add subjects to see aggregate.", className: '' });
-            return;
-        }
-        subjectCards.forEach(card => {
+        document.querySelectorAll('.subject-card').forEach(card => {
             totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
             totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
             totalFutureClasses += countFutureClasses(card.querySelector('.subject-name-input').value);
@@ -482,11 +476,15 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('attendanceData', JSON.stringify(subjects));
     };
     const saveSettings = () => {
-        const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
         const goalPercentage = parseInt(goalPercentageInput.value, 10) || 75;
         const aggregateGoalPercentage = parseInt(aggregateGoalPercentageInput.value, 10) || 75;
         const timetable = settings.timetable || null; 
-        settings = { endDate: endDateInput.value, holidays, goalPercentage, aggregateGoalPercentage, timetable };
+        settings = { 
+            endDate: endDateInput.value, 
+            goalPercentage, 
+            aggregateGoalPercentage, 
+            timetable 
+        };
         localStorage.setItem('attendanceSettings', JSON.stringify(settings));
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
@@ -496,27 +494,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const loadSettings = () => {
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
-        settings = savedSettings || { holidays: [], goalPercentage: 75, aggregateGoalPercentage: 75, timetable: null };
+        settings = savedSettings || { goalPercentage: 75, aggregateGoalPercentage: 75, timetable: null };
         goalPercentageInput.value = settings.goalPercentage || 75;
         aggregateGoalPercentageInput.value = settings.aggregateGoalPercentage || 75;
         endDateInput.value = settings.endDate || '';
-        holidaysList.innerHTML = '';
-        (settings.holidays || []).forEach(addHolidayToList);
     };
-    const addHolidayToList = (date) => {
-        if (!date) return;
-        const existingDates = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
-        if (existingDates.includes(date)) return;
-        const li = document.createElement('li');
-        li.dataset.date = date;
-        li.textContent = new Date(date + 'T00:00:00').toDateString();
-        const removeHolidayBtn = document.createElement('button');
-        removeHolidayBtn.textContent = '×';
-        removeHolidayBtn.style.cssText = 'margin-left: 10px; cursor: pointer;';
-        removeHolidayBtn.onclick = () => li.remove();
-        li.appendChild(removeHolidayBtn);
-        holidaysList.appendChild(li);
-    };
+
     const handleAnalysis = async () => {
         if (!uploadedTimetableFile || !uploadedAttendanceFile) return;
         loadingOverlay.style.display = 'flex';
@@ -598,17 +581,9 @@ document.addEventListener('DOMContentLoaded', () => {
     startOverBtn.addEventListener('click', showHomePage);
     addSubjectBtn.addEventListener('click', () => { createSubjectCard(); calculateAggregateAttendance(); });
     settingsBtn.addEventListener('click', () => { loadSettings(); settingsModal.style.display = 'block'; });
-    
-    // This button was dynamically created, which could be buggy. Let's select it differently.
-    const homeSettingsBtnMaybe = document.getElementById('home-settings-btn');
-    if (homeSettingsBtnMaybe) { // Check if it exists before adding listener
-      homeSettingsBtnMaybe.addEventListener('click', () => { loadSettings(); settingsModal.style.display = 'block'; });
-    }
-    
     closeModal.addEventListener('click', () => settingsModal.style.display = 'none');
     window.addEventListener('click', (e) => { if (e.target == settingsModal) settingsModal.style.display = 'none'; });
     saveSettingsBtn.addEventListener('click', saveSettings);
-    addHolidayBtn.addEventListener('click', () => { addHolidayToList(holidayDateInput.value); holidayDateInput.value = ''; });
     whatIfAttendedInput.addEventListener('input', calculateWhatIf);
     whatIfHeldInput.addEventListener('input', calculateWhatIf);
 
