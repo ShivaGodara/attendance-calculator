@@ -1,7 +1,7 @@
 {
   "name": "ai-attendance-calculator-gemini",
   "version": "1.0.0",
-  "description": "AI-Powered Attendance Calculator using Google Gemini",
+  "description": "AI-Powered Attendance Calculator with advanced leave tracking",
   "dependencies": {
     "@google/generative-ai": "^0.11.3"
   }
