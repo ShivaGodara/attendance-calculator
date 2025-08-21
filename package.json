@@ -1,5 +1,5 @@
 {
-  "name": "ai-attendance-calculator",
+  "name": "ai-attendance-calculator-openai",
   "version": "1.0.0",
   "description": "AI-Powered Attendance Calculator using OpenAI",
   "dependencies": {
