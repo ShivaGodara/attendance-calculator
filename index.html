@@ -72,26 +72,27 @@
 
     <div id="settings-modal">
         <div class="modal-content">
-            <span class="close" style="float:right; cursor:pointer;">&times;</span>
+            <span class="close" style="float:right; cursor:pointer; font-size: 1.5em;">&times;</span>
             <h2>Settings</h2>
             <div class="input-group">
                 <label for="end-date">Semester End Date</label>
                 <input type="date" id="end-date">
             </div>
             <h3 style="margin-top: 20px;">Weekly Timetable</h3>
-            <div id="timetable-grid">
-                </div>
+            <p style="font-size: 0.8em; color: #606770;">Enter subject names exactly as they appear in your attendance list.</p>
+            <div id="timetable-grid"></div>
             <h3 style="margin-top: 20px;">Holidays</h3>
             <div class="input-group" style="display:flex; flex-direction: row; gap: 10px;">
                 <input type="date" id="holiday-date" style="flex-grow: 1;">
-                <button id="add-holiday-btn">Add Holiday</button>
+                <button id="add-holiday-btn" class="control-btn" style="padding: 8px;">Add</button>
             </div>
             <ul id="holidays-list"></ul>
             <button id="save-settings-btn" class="control-btn" style="width: 100%; margin-top: 20px;">Save Settings</button>
         </div>
     </div>
 
-<script>document.addEventListener('DOMContentLoaded', () => {
+<script>
+document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const subjectsContainer = document.getElementById('subjects-container');
     const addSubjectBtn = document.getElementById('add-subject-btn');
@@ -112,7 +113,6 @@
     const TARGET_PERCENTAGE = 75;
     let settings = {};
 
-    // --- NEW HELPER FUNCTION TO FIND THE DATE ---
     const findDateForNthClass = (subjectName, neededClasses) => {
         if (!settings.endDate || !settings.timetable || !subjectName || neededClasses <= 0) {
             return { date: null, days: Infinity };
@@ -128,7 +128,7 @@
             daysCount++;
             if (holidays.includes(d.toDateString())) continue;
 
-            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+            const dayName = d.toLocaleString('en-US', { weekday: 'long' });
             const timetableEntry = settings.timetable[dayName] || '';
 
             if (timetableEntry.toLowerCase().includes(subjectName.toLowerCase())) {
@@ -143,28 +143,6 @@
         return { date: null, days: Infinity };
     };
 
-    const projectFutureClasses = (subjectName) => {
-        if (!settings.endDate || !settings.timetable || !subjectName) return { futureClasses: 0 };
-        
-        let futureClasses = 0;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const endDate = new Date(settings.endDate);
-        
-        const holidays = (settings.holidays || []).map(h => new Date(h).toDateString());
-
-        for (let d = today; d <= endDate; d.setDate(d.getDate() + 1)) {
-            if (holidays.includes(d.toDateString())) continue;
-
-            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
-            if (settings.timetable[dayName]?.toLowerCase().includes(subjectName.toLowerCase())) {
-                futureClasses++;
-            }
-        }
-        return { futureClasses };
-    };
-
-    // --- UPDATED MAIN CALCULATION FUNCTION ---
     const calculateAttendance = (card) => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
@@ -185,7 +163,6 @@
             className = 'status-safe';
         } else {
             const neededHrs = Math.ceil(((TARGET_PERCENTAGE / 100) * total - attended) / (1 - (TARGET_PERCENTAGE / 100)));
-            
             const projection = findDateForNthClass(subjectName, neededHrs);
 
             if (projection.date) {
@@ -195,9 +172,8 @@
                 status = `Need ${neededHrs} more hrs → will reach 75% in ~${projection.days} day(s), around ${formattedDate}`;
                 className = 'status-warning';
             } else {
-                // This is the fallback message if settings are incomplete or it's impossible
                 status = `Need to attend ${neededHrs} more classes.`;
-                className = 'status-danger';
+                className = 'status-warning';
             }
         }
         
@@ -212,8 +188,7 @@
         const resultDisplay = card.querySelector('.result-display');
         resultDisplay.innerHTML = `
             <div class="percentage">${result.percentage.toFixed(2)}%</div>
-            <div class="status-message">${result.status}</div>
-        `;
+            <div class="status-message">${result.status}</div>`;
     };
 
     const createSubjectCard = (data = { name: '', attended: '', total: '' }) => {
@@ -222,29 +197,17 @@
         card.innerHTML = `
             <button class="remove-btn">&times;</button>
             <div class="subject-grid">
-                <div class="input-group">
-                    <label>Subject Name</label>
-                    <input type="text" class="subject-name-input" placeholder="e.g., Physics" value="${data.name}">
-                </div>
-                <div class="input-group">
-                    <label>Attended</label>
-                    <input type="number" class="attended-input" min="0" value="${data.attended}">
-                </div>
-                <div class="input-group">
-                    <label>Total Held</label>
-                    <input type="number" class="total-input" min="0" value="${data.total}">
-                </div>
+                <div class="input-group"><label>Subject Name</label><input type="text" class="subject-name-input" placeholder="e.g., Physics" value="${data.name}"></div>
+                <div class="input-group"><label>Attended</label><input type="number" class="attended-input" min="0" value="${data.attended}"></div>
+                <div class="input-group"><label>Total Held</label><input type="number" class="total-input" min="0" value="${data.total}"></div>
             </div>
-            <div class="result-display">
-                 <div class="status-message">Enter values to calculate.</div>
-            </div>`;
+            <div class="result-display"><div class="status-message">Enter values to calculate.</div></div>`;
         
         card.addEventListener('input', () => calculateAttendance(card));
         card.querySelector('.remove-btn').addEventListener('click', () => { card.remove(); saveData(); });
         
         subjectsContainer.appendChild(card);
-        calculateAttendance(card);
-        return card;
+        if(data.attended || data.total) calculateAttendance(card);
     };
     
     const populateAllCards = (subjectsData) => {
@@ -263,9 +226,7 @@
 
     const loadData = () => {
         const data = JSON.parse(localStorage.getItem('attendanceData'));
-        if (data && data.length > 0) {
-            populateAllCards(data);
-        }
+        if (data && data.length > 0) populateAllCards(data);
     };
     
     const saveSettings = () => {
@@ -275,11 +236,7 @@
         });
         const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
         
-        settings = {
-            endDate: endDateInput.value,
-            timetable: timetable,
-            holidays: holidays
-        };
+        settings = { endDate: endDateInput.value, timetable, holidays };
         localStorage.setItem('attendanceSettings', JSON.stringify(settings));
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
@@ -287,33 +244,32 @@
 
     const loadSettings = () => {
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
-        if (savedSettings) {
-            settings = savedSettings;
-            endDateInput.value = settings.endDate || '';
-            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            timetableGrid.innerHTML = '';
-            days.forEach(day => {
-                timetableGrid.innerHTML += `
-                    <div class="input-group">
-                        <label>${day}</label>
-                        <input type="text" data-day="${day}" placeholder="Subjects..." value="${settings.timetable?.[day] || ''}">
-                    </div>`;
-            });
-            holidaysList.innerHTML = '';
-            (settings.holidays || []).forEach(addHolidayToList);
-        } else {
-            loadSettings(); 
-        }
+        settings = savedSettings || { timetable: {}, holidays: [] };
+        endDateInput.value = settings.endDate || '';
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        timetableGrid.innerHTML = '';
+        days.forEach(day => {
+            timetableGrid.innerHTML += `
+                <div class="input-group">
+                    <label>${day}</label>
+                    <input type="text" data-day="${day}" placeholder="Subjects..." value="${settings.timetable[day] || ''}">
+                </div>`;
+        });
+        holidaysList.innerHTML = '';
+        (settings.holidays || []).forEach(addHolidayToList);
     };
     
     const addHolidayToList = (date) => {
         if (!date) return;
+        const existingDates = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
+        if (existingDates.includes(date)) return;
+
         const li = document.createElement('li');
         li.dataset.date = date;
         li.textContent = new Date(date + 'T00:00:00').toDateString();
         const removeHolidayBtn = document.createElement('button');
-        removeHolidayBtn.textContent = 'x';
-        removeHolidayBtn.style.marginLeft = '10px';
+        removeHolidayBtn.textContent = '×';
+        removeHolidayBtn.style.cssText = 'margin-left: 10px; cursor: pointer; border: none; background: none; color: red;';
         removeHolidayBtn.onclick = () => li.remove();
         li.appendChild(removeHolidayBtn);
         holidaysList.appendChild(li);
@@ -347,9 +303,9 @@
         };
     };
 
+    // --- EVENT LISTENERS ---
     addSubjectBtn.addEventListener('click', () => createSubjectCard());
     uploadInput.addEventListener('change', handleFileUpload);
-    
     settingsBtn.addEventListener('click', () => {
         loadSettings();
         settingsModal.style.display = 'block';
@@ -362,10 +318,10 @@
         holidayDateInput.value = '';
     });
 
+    // --- INITIAL LOAD ---
     loadSettings();
     loadData();
 });
 </script>
 </body>
 </html>
-
