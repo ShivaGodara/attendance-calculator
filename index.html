@@ -8,7 +8,6 @@
 </head>
 <body>
     <div id="loading-overlay"><div><div class="spinner"></div><p>Analyzing...</p></div></div>
-
     <div class="container">
         <div id="home-page">
             <header>
@@ -19,8 +18,7 @@
                 <div class="upload-wrapper">
                     <h4>Step 1: Timetable</h4>
                     <div id="upload-area-timetable" class="upload-area">
-                        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAdASURBVHhe7Vt7UJNVGP7Ovbub3U3uBsmGhRAiihyQiIgoKoDFgKIgCC5y5YJLl4qFLi4dEVdeWOgH/YCLrqwo6IIuioDgCq6IihxEEuQmSTe5yd3Nbm5y9zu56e4mKUAkH5n+vC/fe868M+/vzHvveWcCMzMzMzMzMzMzMzPzXwuh67gOtYaiqL5jGk2jNJoRax30852GgP2g+2j184sWJ11dG/vQd1hpfP5F72UvNBrz8Dutg4rXf6502Wtc/b0w4+p7mG6i63I1n1e0/a6B1v7cprJd3c+rT/tP5t2+Q7vjN7yS/fCj6169hLzYkQ8h71s/9aG2sI5qL/UqWl7cZ1V9bO1m/wZ1m94+659+G0N82Cfnwg+s+vASrC832/P2h+64J2H5sI+74R+5vR+1h8a7P+b0b/vM/Zt03o53l9/0UvN8RhyGvbB3u/B68L8f/i+Xw/d//W7v3p/L+n+/5+2oE55N/8Kfnwg+s+vASrC9X/97/81L73A/d/8953fGv+/Yl5PzPum9FuzYl5PzceQ162V4f3/V4Rmq19y/h8q//e9FvyAmd9O/z/w/2H7v19/H8xYj/+/f/X97L/w4+se/AyrC1U/3d/8dY/vOdX/rV3dZ8h5v/Wvffqf/j3l1E+ZgB78KPrHrwEqwuV//df+v8f2vNf+/df+tXf/f/d9WvW/Z/XvX4YmZub+W2yL9q0H8iG3jTqPzV8Q/jM+f6P2aZ3v+3t2KblH7t+eG/6v9b9bH97314YVpL8z/5e2L3/p3V/Z/Lz334b/l5/I2b+l8+8e3PqP2a13/+3d+zbrD+t++b0wP/WvffpA+W/eX/r3/qP3b/V/D17Q/dD93/y/8Xv+h3a/68+e688H/P3/a/n7b/j9/z++F/7MP/B+e/y7r9/z/6H9v3/d7f+77/f++8//+O3z/f//6/0H/BwAAAABJRU5ErkJggg==" alt="Timetable Icon" class="upload-icon">
-                        <p>Paste, Drop, or Triple-Click</p>
+                        <div class="upload-icon">📅</div><p>Paste, Drop, or Triple-Click</p>
                     </div>
                     <div class="upload-status-wrapper">
                         <p id="timetable-status" class="upload-status"></p>
@@ -30,8 +28,7 @@
                 <div class="upload-wrapper">
                     <h4>Step 2: Attendance Summary</h4>
                     <div id="upload-area-attendance" class="upload-area">
-                        <img src="data:image/png;base64,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" alt="Attendance Icon" class="upload-icon">
-                        <p>Paste, Drop, or Triple-Click</p>
+                        <div class="upload-icon">📊</div><p>Paste, Drop, or Triple-Click</p>
                     </div>
                     <div class="upload-status-wrapper">
                          <p id="attendance-status" class="upload-status"></p>
@@ -39,23 +36,21 @@
                     </div>
                 </div>
             </div>
+            <div class="upload-wrapper" style="margin-bottom: 20px;">
+                <h4>Step 3: Leave Details (Optional)</h4>
+                <div id="upload-area-leaves" class="upload-area">
+                    <div class="upload-icon">📄</div><p>Upload one or more leave screenshots</p>
+                </div>
+                <ul id="leave-files-list"></ul>
+                <button id="add-leave-file-btn" class="control-btn secondary-btn" style="margin-top: 10px;">+ Add Leave Screenshot</button>
+            </div>
             <input type="file" id="timetable-upload-input" accept="image/*">
             <input type="file" id="attendance-upload-input" accept="image/*">
+            <input type="file" id="leaves-upload-input" accept="image/*" multiple>
             <button id="analyze-btn" class="control-btn" disabled>Analyze Screenshots</button>
-            <div class="instructions">
-                <h3>How to Use</h3>
-                <ul>
-                    <li>Upload clean, uncropped screenshots of your weekly timetable and your latest attendance report.</li>
-                    <li>You can **paste** images from your clipboard, **drag & drop** files, or **triple-click** a box to browse files.</li>
-                    <li>Click **Analyze** to get your detailed attendance report!</li>
-                    <li>Use the **Settings** on the results page to set your goals and end date for accurate predictions.</li>
-                </ul>
-            </div>
         </div>
-
         <div id="results-page" class="hidden">
-            <header>
-                <h1>Your Attendance Analysis</h1>
+            <header><h1>Your Attendance Analysis</h1>
                 <div class="controls-grid" style="margin-top: 20px;">
                     <button id="start-over-btn" class="control-btn secondary-btn">Start Over</button>
                     <button id="settings-btn" class="control-btn secondary-btn">⚙️ Settings</button>
@@ -87,7 +82,6 @@
             <button id="add-subject-btn" class="control-btn secondary-btn" style="width: 100%; margin-top: 10px;">➕ Add Subject Manually</button>
         </div>
     </div>
-
     <div id="settings-modal">
         <div class="modal-content">
             <span class="close" style="float:right; cursor:pointer; font-size: 1.5em;">&times;</span>
@@ -98,7 +92,6 @@
             <button id="save-settings-btn" class="control-btn" style="width: 100%; margin-top: 20px;">Save Settings</button>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
