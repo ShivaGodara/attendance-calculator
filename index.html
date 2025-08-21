@@ -31,6 +31,16 @@
         #screenshot-upload-input { display: none; }
 
         /* --- Results Page Styles --- */
+        #aggregate-summary { background-color: var(--card-bg); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); text-align: center; border-left: 5px solid var(--border-color); }
+        #aggregate-summary.status-safe { border-left-color: var(--safe-color); background-color: #eaf6ec; }
+        #aggregate-summary.status-warning { border-left-color: var(--warning-color); background-color: #fff8e1; }
+        #aggregate-summary.status-danger { border-left-color: var(--danger-color); background-color: #fdecea; }
+        #aggregate-percentage { font-size: 2.5em; font-weight: 700; }
+        #aggregate-status { font-size: 1.1em; margin-top: 5px; font-weight: 500; }
+        .status-safe #aggregate-status { color: var(--safe-color); }
+        .status-warning #aggregate-status { color: #b79000; }
+        .status-danger #aggregate-status { color: var(--danger-color); }
+
         .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .secondary-btn { background-color: var(--card-bg); color: var(--primary-color); border: 1px solid var(--primary-color); }
         .secondary-btn:hover { background-color: #f0f2f5; }
@@ -45,9 +55,9 @@
         .result-display { text-align: center; padding: 10px; border-radius: 6px; margin-top: 16px; }
         .result-display .percentage { font-size: 1.5em; font-weight: 700; }
         .result-display .status-message { font-size: 1em; margin-top: 4px; font-weight: 500; }
-        .status-safe .result-display { background-color: #eaf6ec; color: var(--safe-color); }
-        .status-warning .result-display { background-color: #fff8e1; color: #b79000; }
-        .status-danger .result-display { background-color: #fdecea; color: var(--danger-color); }
+        .status-safe .result-display { background-color: #eaf6ec; }
+        .status-warning .result-display { background-color: #fff8e1; }
+        .status-danger .result-display { background-color: #fdecea; }
         .remove-btn { color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 8px; font-size: 0.9em; float: right; }
         #settings-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
@@ -87,6 +97,12 @@
             <header>
                 <h1>Your Attendance Analysis</h1>
             </header>
+            
+            <div id="aggregate-summary">
+                <div id="aggregate-percentage">0.00%</div>
+                <div id="aggregate-status">Calculating...</div>
+            </div>
+
             <div class="controls-grid">
                 <button id="start-over-btn" class="control-btn secondary-btn">Start Over</button>
                 <button id="settings-btn" class="control-btn secondary-btn">⚙️ Settings</button>
@@ -102,8 +118,13 @@
             <h2>Settings</h2>
             
             <div class="input-group">
-                <label for="goal-percentage">Goal Attendance Percentage (%)</label>
-                <input type="number" id="goal-percentage" min="1" max="100" value="75">
+                <label for="goal-percentage">Goal for Each Subject (%)</label>
+                <input type="number" id="goal-percentage" min="1" max="100">
+            </div>
+
+            <div class="input-group">
+                <label for="aggregate-goal-percentage">Overall Aggregate Goal (%)</label>
+                <input type="number" id="aggregate-goal-percentage" min="1" max="100">
             </div>
 
             <div class="input-group">
@@ -130,6 +151,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const homePage = document.getElementById('home-page');
     const resultsPage = document.getElementById('results-page');
     const loadingOverlay = document.getElementById('loading-overlay');
+    const aggregateSummary = document.getElementById('aggregate-summary');
+    const aggregatePercentageDisplay = document.getElementById('aggregate-percentage');
+    const aggregateStatusDisplay = document.getElementById('aggregate-status');
 
     // --- Home Page Elements ---
     const uploadArea = document.getElementById('upload-area');
@@ -154,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addHolidayBtn = document.getElementById('add-holiday-btn');
     const holidaysList = document.getElementById('holidays-list');
     const goalPercentageInput = document.getElementById('goal-percentage');
+    const aggregateGoalPercentageInput = document.getElementById('aggregate-goal-percentage');
     
     let settings = {};
     let uploadedFile = null;
@@ -187,21 +212,70 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         const endDate = new Date(settings.endDate);
         const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
-
         for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
             if (holidays.includes(d.toDateString())) continue;
             const dayName = d.toLocaleString('en-US', { weekday: 'long' });
             const classesToday = FIXED_TIMETABLE[dayName] || [];
             for (const subject of classesToday) {
-                if (subject.toUpperCase() === subjectName.toUpperCase()) {
-                    classCount++;
-                }
+                if (subject.toUpperCase() === subjectName.toUpperCase()) classCount++;
             }
         }
         return classCount;
     };
 
-    // --- UPDATED CALCULATION LOGIC WITH NEW OUTPUT MESSAGES ---
+    // --- New Aggregate Calculation Functions ---
+    const calculateAggregateAttendance = () => {
+        let totalAttended = 0;
+        let totalHeld = 0;
+        let totalFutureClasses = 0;
+        const subjectCards = document.querySelectorAll('.subject-card');
+
+        if (subjectCards.length === 0) {
+            updateAggregateUI({ percentage: 0, status: "Add subjects to see aggregate.", className: '' });
+            return;
+        }
+
+        subjectCards.forEach(card => {
+            totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
+            totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
+            const subjectName = card.querySelector('.subject-name-input').value;
+            totalFutureClasses += countFutureClasses(subjectName);
+        });
+
+        const aggregateGoal = settings.aggregateGoalPercentage || 75;
+        const currentAggregatePercentage = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0;
+        let status = '', className = '';
+
+        if (currentAggregatePercentage >= aggregateGoal) {
+            const safeToMiss = Math.floor(totalAttended / (aggregateGoal / 100) - totalHeld);
+            status = `Aggregate goal met. You can miss ${safeToMiss} total class(es).`;
+            className = 'status-safe';
+        } else {
+            const maxPossibleAttended = totalAttended + totalFutureClasses;
+            const maxPossibleTotal = totalHeld + totalFutureClasses;
+            const maxPossiblePercentage = maxPossibleTotal > 0 ? (maxPossibleAttended / maxPossibleTotal) * 100 : 0;
+            if (maxPossiblePercentage < aggregateGoal) {
+                const goalAttended = Math.ceil((aggregateGoal / 100) * maxPossibleTotal);
+                const missedByHrs = goalAttended - maxPossibleAttended;
+                status = `Aggregate impossible. Missed target by ${missedByHrs} total hr(s).`;
+                className = 'status-danger';
+            } else {
+                const neededHrs = Math.ceil(((aggregateGoal / 100) * totalHeld - totalAttended) / (1 - (aggregateGoal / 100)));
+                status = `Need to attend ${neededHrs} more total hr(s) for aggregate goal.`;
+                className = 'status-warning';
+            }
+        }
+        updateAggregateUI({ percentage: currentAggregatePercentage, status, className });
+    };
+
+    const updateAggregateUI = (result) => {
+        aggregateSummary.className = ''; // Reset class
+        if (result.className) aggregateSummary.classList.add(result.className);
+        aggregatePercentageDisplay.textContent = `${result.percentage.toFixed(2)}%`;
+        aggregateStatusDisplay.textContent = result.status;
+    };
+
+
     const calculateAttendance = (card) => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
@@ -216,26 +290,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentPercentage = (attended / total) * 100;
         let status = '', className = '';
 
-        // State 1: Already Reached (Safe)
         if (currentPercentage >= goalPercentage) {
             const safeToMiss = Math.floor(attended / (goalPercentage / 100) - total);
             status = `You can miss ${safeToMiss} more class(es).`;
             className = 'status-safe';
         } else {
-            // Check if it's possible to reach the goal
             const futureClasses = countFutureClasses(subjectName);
             const maxPossibleAttended = attended + futureClasses;
             const maxPossibleTotal = total + futureClasses;
             const maxPossiblePercentage = maxPossibleTotal > 0 ? (maxPossibleAttended / maxPossibleTotal) * 100 : 0;
-
-            // State 3: Impossible to Reach (Danger)
             if (maxPossiblePercentage < goalPercentage) {
                 const goalAttended = Math.ceil((goalPercentage / 100) * maxPossibleTotal);
                 const missedByHrs = goalAttended - maxPossibleAttended;
                 status = `Missed target by ${missedByHrs} hr(s).`;
                 className = 'status-danger';
             } else {
-                // State 2: Possible to Reach (Warning)
                 const neededHrs = Math.ceil(((goalPercentage / 100) * total - attended) / (1 - (goalPercentage / 100)));
                 status = `Need to attend ${neededHrs} more hr(s).`;
                 className = 'status-warning';
@@ -243,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateCardUI(card, { percentage: currentPercentage, status, className });
         saveData();
+        calculateAggregateAttendance(); // Recalculate aggregate whenever a subject changes
     };
 
     const updateCardUI = (card, result) => {
@@ -264,7 +334,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="result-display"><div class="status-message">Enter values to calculate.</div></div>`;
         card.addEventListener('input', () => calculateAttendance(card));
-        card.querySelector('.remove-btn').addEventListener('click', () => { card.remove(); saveData(); });
+        card.querySelector('.remove-btn').addEventListener('click', () => { 
+            card.remove(); 
+            saveData();
+            calculateAggregateAttendance();
+        });
         subjectsContainer.appendChild(card);
         if(data.attended || data.total) calculateAttendance(card);
     };
@@ -272,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const populateAllCards = (subjectsData) => {
         subjectsContainer.innerHTML = '';
         subjectsData.forEach(createSubjectCard);
+        calculateAggregateAttendance();
     };
 
     const saveData = () => {
@@ -286,20 +361,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSettings = () => {
         const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
         const goalPercentage = parseInt(goalPercentageInput.value, 10) || 75;
+        const aggregateGoalPercentage = parseInt(aggregateGoalPercentageInput.value, 10) || 75;
         settings = { 
             endDate: endDateInput.value, 
             holidays: holidays,
-            goalPercentage: goalPercentage
+            goalPercentage: goalPercentage,
+            aggregateGoalPercentage: aggregateGoalPercentage
         };
         localStorage.setItem('attendanceSettings', JSON.stringify(settings));
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
+        calculateAggregateAttendance();
     };
 
     const loadSettings = () => {
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
-        settings = savedSettings || { holidays: [], goalPercentage: 75 };
+        settings = savedSettings || { holidays: [], goalPercentage: 75, aggregateGoalPercentage: 75 };
         goalPercentageInput.value = settings.goalPercentage || 75;
+        aggregateGoalPercentageInput.value = settings.aggregateGoalPercentage || 75;
         endDateInput.value = settings.endDate || '';
         holidaysList.innerHTML = '';
         (settings.holidays || []).forEach(addHolidayToList);
@@ -367,7 +446,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     analyzeBtn.addEventListener('click', handleFileUpload);
     startOverBtn.addEventListener('click', showHomePage);
-    addSubjectBtn.addEventListener('click', () => createSubjectCard());
+    addSubjectBtn.addEventListener('click', () => {
+        createSubjectCard();
+        calculateAggregateAttendance();
+    });
     
     settingsBtn.addEventListener('click', () => {
         loadSettings();
