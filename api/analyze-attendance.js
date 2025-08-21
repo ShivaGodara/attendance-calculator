@@ -1,9 +1,15 @@
-const OpenAI = require("openai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Initialize the OpenAI client with the key from Vercel's environment variables
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+function fileToGenerativePart(buffer, mimeType) {
+  return {
+    inlineData: {
+      data: buffer.toString("base64"),
+      mimeType,
+    },
+  };
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -16,7 +22,9 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "Image data and mimeType are required." });
     }
 
-    const attendancePrompt = `
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
       You are an expert at analyzing and consolidating data from a student's attendance portal screenshot.
       For each distinct "Subject Name", you must combine its "Theory" and "Practical" rows into a single entry.
       Your task is to:
@@ -29,35 +37,21 @@ module.exports = async (req, res) => {
       For example, for 'ADVANCED PYTHON', sum Conducted (28.0 + 17.0 = 45) and Present (23.0 + 13.0 = 36). The result is {"name": "ADVANCED PYTHON", "attended": 36, "total": 45}.
       Process all subjects. Do not output any text, explanations, or markdown formatting. Only output the final JSON array.
     `;
+    
+    const imageBuffer = Buffer.from(image, 'base64');
+    const imagePart = fileToGenerativePart(imageBuffer, mimeType);
 
-    // Make the API call to OpenAI
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: attendancePrompt },
-            {
-              type: "image_url",
-              image_url: {
-                "url": `data:${mimeType};base64,${image}`
-              },
-            },
-          ],
-        },
-      ],
-      max_tokens: 2048,
-    });
+    const result = await model.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    const text = response.text();
 
-    const jsonResponse = response.choices[0].message.content;
-    const cleanedText = jsonResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const jsonData = JSON.parse(cleanedText);
-
+    
     res.status(200).json(jsonData);
 
   } catch (error) {
-    console.error("Error processing request with OpenAI:", error);
+    console.error("Error processing request:", error);
     res.status(500).json({ error: "Failed to analyze attendance image.", details: error.message });
   }
 };
