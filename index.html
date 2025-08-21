@@ -128,31 +128,29 @@ document.addEventListener('DOMContentLoaded', () => {
         let status = '';
         let className = '';
 
-        // Projection Logic
-        const { futureClasses } = projectFutureClasses(subjectName);
-        const projectedAttended = attended + futureClasses;
-        const projectedTotal = total + futureClasses;
-        const projectedPercentage = projectedTotal > 0 ? (projectedAttended / projectedTotal) * 100 : 0;
-        
         if (currentPercentage >= TARGET_PERCENTAGE) {
             const safeToMiss = Math.floor(attended / (TARGET_PERCENTAGE / 100) - total);
-            status = `On Track. You can miss ${safeToMiss} classes.`;
+            status = `On Track. You can safely miss the next ${safeToMiss} classes.`;
             className = 'status-safe';
-            if (futureClasses > 0) {
-                 status += ` Projected: ${projectedPercentage.toFixed(2)}%.`;
-            }
         } else {
-            const needed = Math.ceil(((TARGET_PERCENTAGE / 100) * total - attended) / (1 - (TARGET_PERCENTAGE / 100)));
-            status = `Need to attend ${needed} more classes.`;
-            className = 'status-warning';
+            const neededHrs = Math.ceil(((TARGET_PERCENTAGE / 100) * total - attended) / (1 - (TARGET_PERCENTAGE / 100)));
+            
+            // Use our new function to get the date projection
+            const projection = findDateForNthClass(subjectName, neededHrs);
 
-            if (futureClasses > 0) {
-                if (projectedPercentage >= TARGET_PERCENTAGE) {
-                    status += ` Projected to be safe (${projectedPercentage.toFixed(2)}%) if you attend all future classes.`;
-                } else {
-                    status += ` Even with perfect attendance, you may not reach 75% (Projected: ${projectedPercentage.toFixed(2)}%).`;
-                    className = 'status-danger';
-                }
+            if (projection.date) {
+                // Format the date like "Thu Sep 11 2025"
+                const formattedDate = projection.date.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                status = `Need ${neededHrs} more hrs → will reach 75% in ~${projection.days} day(s), around ${formattedDate}`;
+                className = 'status-warning';
+            } else {
+                status = `Need ${neededHrs} more hrs, but it's not possible to reach 75% by the semester end date.`;
+                className = 'status-danger';
             }
         }
         
@@ -179,6 +177,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         return { futureClasses };
+    };
+
+    const findDateForNthClass = (subjectName, neededClasses) => {
+        if (!settings.endDate || !settings.timetable || !subjectName || neededClasses <= 0) {
+            return { date: null, days: Infinity };
+        }
+        
+        let classCount = 0;
+        let daysCount = 0;
+        const today = new Date();
+        const endDate = new Date(settings.endDate);
+        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
+
+        // Loop one day at a time from today until the semester ends
+        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+            daysCount++;
+            // Skip if it's a holiday
+            if (holidays.includes(d.toDateString())) continue;
+
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+            const timetableEntry = settings.timetable[dayName] || '';
+
+            // Check if the subject is in the timetable for this day
+            if (timetableEntry.toLowerCase().includes(subjectName.toLowerCase())) {
+                classCount++;
+            }
+
+            // If we have attended the needed number of classes, we're done
+            if (classCount >= neededClasses) {
+                return { date: d, days: daysCount };
+            }
+        }
+        
+        // If the loop finishes, it's not possible to attend enough classes
+        return { date: null, days: Infinity };
     };
 
     // --- UI Update & DOM Manipulation ---
