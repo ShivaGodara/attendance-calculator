@@ -2,7 +2,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Access your API key as an environment variable
-const genAI = new GoogleGenerativeAI(process.env.AIzaSyDBo1_7WLLS54lv0eRbU7JHKofKLHrRCo4);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Function to convert a file buffer to a Gemini-compatible part
 function fileToGenerativePart(buffer, mimeType) {
@@ -75,3 +75,4 @@ const prompt = `
     res.status(500).json({ error: "Failed to analyze image.", details: error.message });
   }
 };
+
