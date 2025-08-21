@@ -39,7 +39,7 @@
         .subject-card.status-warning { border-left-color: var(--warning-color); }
         .subject-card.status-danger { border-left-color: var(--danger-color); }
         .subject-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; align-items: flex-end; }
-        .input-group { display: flex; flex-direction: column; }
+        .input-group { display: flex; flex-direction: column; margin-bottom: 15px; }
         .input-group label { font-size: 0.8em; margin-bottom: 4px; font-weight: 500; color: #606770; }
         .input-group input { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em; width: 100%; box-sizing: border-box; }
         .result-display { text-align: center; padding: 10px; border-radius: 6px; margin-top: 16px; }
@@ -52,7 +52,7 @@
         #settings-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
         .modal-content h2 { margin-top: 0; }
-        #holidays-list { list-style-type: none; padding: 0; }
+        #holidays-list { list-style-type: none; padding: 0; margin-top: 10px;}
         #loading-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); justify-content: center; align-items: center; text-align: center; }
         .spinner { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -62,14 +62,10 @@
 <body>
 
     <div id="loading-overlay">
-        <div>
-            <div class="spinner"></div>
-            <p>Analyzing screenshot...</p>
-        </div>
+        <div><div class="spinner"></div><p>Analyzing screenshot...</p></div>
     </div>
 
     <div class="container">
-        <!-- =========== HOME PAGE =========== -->
         <div id="home-page">
             <header>
                 <h1>AI Attendance Calculator</h1>
@@ -87,7 +83,6 @@
             <button id="analyze-btn" class="control-btn" disabled>Analyze Screenshot</button>
         </div>
 
-        <!-- =========== RESULTS PAGE =========== -->
         <div id="results-page" class="hidden">
             <header>
                 <h1>Your Attendance Analysis</h1>
@@ -101,18 +96,27 @@
         </div>
     </div>
 
-    <!-- =========== SETTINGS MODAL (for Results Page) =========== -->
     <div id="settings-modal">
         <div class="modal-content">
             <span class="close" style="float:right; cursor:pointer; font-size: 1.5em;">&times;</span>
             <h2>Settings</h2>
+            
+            <div class="input-group">
+                <label for="goal-percentage">Goal Attendance Percentage (%)</label>
+                <input type="number" id="goal-percentage" min="1" max="100" value="75">
+            </div>
+
             <div class="input-group">
                 <label for="end-date">Semester End Date</label>
                 <input type="date" id="end-date">
             </div>
+            
             <h3 style="margin-top: 20px;">Holidays</h3>
-            <div class="input-group" style="display:flex; flex-direction: row; gap: 10px;">
-                <input type="date" id="holiday-date" style="flex-grow: 1;">
+            <div class="input-group" style="display:flex; flex-direction: row; gap: 10px; align-items: flex-end;">
+                <div style="flex-grow: 1;">
+                    <label for="holiday-date">Add Holiday</label>
+                    <input type="date" id="holiday-date">
+                </div>
                 <button id="add-holiday-btn" class="control-btn" style="padding: 8px;">Add</button>
             </div>
             <ul id="holidays-list"></ul>
@@ -149,8 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const holidayDateInput = document.getElementById('holiday-date');
     const addHolidayBtn = document.getElementById('add-holiday-btn');
     const holidaysList = document.getElementById('holidays-list');
+    // Get reference to the new goal percentage input
+    const goalPercentageInput = document.getElementById('goal-percentage');
     
-    const TARGET_PERCENTAGE = 75;
     let settings = {};
     let uploadedFile = null;
 
@@ -163,14 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
         'Saturday': 'CYBER SECURITY, MINI PROJECT, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING'
     };
 
-    // --- Page Navigation ---
     const showHomePage = () => {
         resultsPage.classList.add('hidden');
         homePage.classList.remove('hidden');
         filePreview.classList.add('hidden');
         analyzeBtn.disabled = true;
         uploadedFile = null;
-        uploadInput.value = ''; // Reset file input
+        uploadInput.value = '';
     };
 
     const showResultsPage = () => {
@@ -178,11 +182,11 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsPage.classList.remove('hidden');
     };
 
-    // --- Core Logic (Calculations, UI updates, etc.) ---
     const findDateForNthClass = (subjectName, neededClasses) => {
         if (!settings.endDate || !subjectName || neededClasses <= 0) return { date: null, days: Infinity };
         let classCount = 0, daysCount = 0;
-        const today = new Date(), endDate = new Date(settings.endDate);
+        const today = new Date();
+        const endDate = new Date(settings.endDate);
         const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
         for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
             daysCount++;
@@ -199,25 +203,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
         const subjectName = card.querySelector('.subject-name-input').value;
+        // Use the goal from settings, with a fallback to 75
+        const goalPercentage = settings.goalPercentage || 75;
+
         if (total <= 0) {
             updateCardUI(card, { percentage: 0, status: "Enter valid numbers.", className: '' });
             return;
         }
+
         const currentPercentage = (attended / total) * 100;
         let status = '', className = '';
-        if (currentPercentage >= TARGET_PERCENTAGE) {
-            const safeToMiss = Math.floor(attended / (TARGET_PERCENTAGE / 100) - total);
+
+        if (currentPercentage >= goalPercentage) {
+            const safeToMiss = Math.floor(attended / (goalPercentage / 100) - total);
             status = `On Track. You can safely miss the next ${safeToMiss} classes.`;
             className = 'status-safe';
         } else {
-            const neededHrs = Math.ceil(((TARGET_PERCENTAGE / 100) * total - attended) / (1 - (TARGET_PERCENTAGE / 100)));
+            const neededHrs = Math.ceil(((goalPercentage / 100) * total - attended) / (1 - (goalPercentage / 100)));
             const projection = findDateForNthClass(subjectName, neededHrs);
             if (projection.date) {
                 const formattedDate = projection.date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-                status = `Need ${neededHrs} more hrs → will reach 75% in ~${projection.days} day(s), around ${formattedDate}`;
+                status = `Need ${neededHrs} more hrs → will reach ${goalPercentage}% in ~${projection.days} day(s), around ${formattedDate}`;
                 className = 'status-warning';
             } else {
-                status = `Need to attend ${neededHrs} more classes.`;
+                status = `Need to attend ${neededHrs} more classes to reach ${goalPercentage}%.`;
                 className = 'status-warning';
             }
         }
@@ -265,16 +274,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const saveSettings = () => {
         const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
-        settings = { endDate: endDateInput.value, holidays, timetable: FIXED_TIMETABLE };
-        localStorage.setItem('attendanceSettings', JSON.stringify({ endDate: settings.endDate, holidays: settings.holidays }));
+        // Read goal percentage from the input
+        const goalPercentage = parseInt(goalPercentageInput.value, 10) || 75;
+        
+        settings = { 
+            endDate: endDateInput.value, 
+            holidays: holidays,
+            goalPercentage: goalPercentage // Save the goal
+        };
+        // Save only the necessary parts to localStorage
+        localStorage.setItem('attendanceSettings', JSON.stringify(settings));
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
     };
 
     const loadSettings = () => {
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
-        settings = savedSettings || { holidays: [] };
-        settings.timetable = FIXED_TIMETABLE;
+        settings = savedSettings || { holidays: [], goalPercentage: 75 };
+        
+        // Set the value of the input fields from loaded settings
+        goalPercentageInput.value = settings.goalPercentage || 75;
         endDateInput.value = settings.endDate || '';
         holidaysList.innerHTML = '';
         (settings.holidays || []).forEach(addHolidayToList);
@@ -312,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 populateAllCards(data);
                 saveData();
-                showResultsPage(); // Navigate to results page on success
+                showResultsPage();
             } catch (error) {
                 console.error("Error analyzing screenshot:", error);
                 alert("Could not analyze screenshot. Please check the format or try again.");
