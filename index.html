@@ -4,89 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Attendance Calculator</title>
-    <style>
-        :root {
-            --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #1c1e21; --primary-color: #1877f2;
-            --border-color: #dddfe2; --danger-color: #fa383e; --warning-color: #f5a623; --safe-color: #34c759;
-            --shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { max-width: 800px; width: 100%; margin: 0 auto; }
-        header { text-align: center; margin-bottom: 24px; }
-        header h1 { color: var(--primary-color); margin-bottom: 8px; }
-        .control-btn { background-color: var(--primary-color); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: 600; text-align: center; transition: all 0.2s; font-size: 1.1em; }
-        .control-btn:hover { background-color: #166fe5; }
-        .control-btn:disabled { background-color: #a0bdf1; cursor: not-allowed; }
-        .hidden { display: none !important; }
-
-        #home-page { text-align: center; }
-        .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .upload-wrapper { display: flex; flex-direction: column; }
-        .upload-wrapper h4 { color: #606770; margin-bottom: 10px; }
-        .upload-area { background-color: var(--card-bg); border: 2px dashed var(--border-color); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
-        .upload-area:hover { border-color: var(--primary-color); box-shadow: 0 4px 8px rgba(0,0,0,0.1); transform: translateY(-2px); }
-        .upload-area.uploaded { border-color: var(--safe-color); border-style: solid; }
-        .upload-area p { margin: 0; font-size: 1.1em; color: #606770; }
-        .upload-area .upload-icon { font-size: 3em; color: var(--primary-color); margin-bottom: 10px; }
-        .upload-status-wrapper { display: flex; align-items: center; justify-content: center; margin-top: 10px; }
-        .upload-status { font-weight: 500; font-size: 0.9em; }
-        .upload-status.success { color: var(--safe-color); }
-        .clear-btn { background: none; border: none; color: var(--danger-color); font-size: 1.5em; cursor: pointer; margin-left: 8px; line-height: 1; padding: 0; }
-        .upload-wrapper input[type="file"] { display: none; }
-        #leave-files-list { font-size: 0.9em; text-align: left; margin-top: 10px; padding-left: 10px; }
-        #leave-files-list li { margin-bottom: 5px; list-style-type: none; display: flex; justify-content: space-between; align-items: center; }
-        .instructions { margin-top: 30px; padding: 20px; background-color: var(--card-bg); border-radius: 8px; text-align: left; line-height: 1.6; }
-        .instructions h3 { margin-top: 0; color: var(--primary-color); }
-        .instructions ul { padding-left: 20px; margin-bottom: 0;}
-
-        .tabs { border-bottom: 1px solid var(--border-color); margin-bottom: 20px; display: flex; }
-        .tab-link { background: none; border: none; padding: 15px 20px; cursor: pointer; font-size: 1.1em; font-weight: 500; color: #606770; border-bottom: 3px solid transparent; }
-        .tab-link.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        #aggregate-summary, #aggregate-bunk-summary { background-color: var(--card-bg); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); text-align: center; border-left: 5px solid var(--border-color); }
-        #aggregate-summary.status-safe, #aggregate-bunk-summary.status-safe { border-left-color: var(--safe-color); background-color: #eaf6ec; }
-        #aggregate-summary.status-warning { border-left-color: var(--warning-color); background-color: #fff8e1; }
-        #aggregate-summary.status-danger, #aggregate-bunk-summary.status-danger { border-left-color: var(--danger-color); background-color: #fdecea; }
-        #aggregate-percentage { font-size: 2.5em; font-weight: 700; }
-        #aggregate-status, #aggregate-bunk-status { font-size: 1.1em; margin-top: 5px; font-weight: 500; }
-        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .secondary-btn { background-color: var(--card-bg); color: var(--primary-color); border: 1px solid var(--primary-color); }
-        .subject-card, .bunk-card { background-color: var(--card-bg); border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border-left: 5px solid var(--border-color); }
-        .bunk-card .bunk-card-subject { font-weight: 600; font-size: 1.2em; margin-bottom: 12px; }
-        .bunk-card .bunk-detail { display: flex; justify-content: space-between; align-items: center; font-size: 1em; padding: 8px 0; border-bottom: 1px solid var(--bg-color); }
-        .bunk-card .bunk-detail:last-child { border-bottom: none; }
-        .bunk-card .bunk-detail span { font-weight: 700; }
-        .subject-card.status-safe { border-left-color: var(--safe-color); }
-        .subject-card.status-warning { border-left-color: var(--warning-color); }
-        .subject-card.status-danger { border-left-color: var(--danger-color); }
-        .subject-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; align-items: flex-end; }
-        .input-group { display: flex; flex-direction: column; margin-bottom: 15px; }
-        .input-group label { font-size: 0.8em; margin-bottom: 4px; font-weight: 500; color: #606770; }
-        .input-group input { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em; width: 100%; box-sizing: border-box; }
-        .result-display { text-align: center; padding: 10px; border-radius: 6px; margin-top: 16px; }
-        .result-display .percentage { font-size: 1.5em; font-weight: 700; }
-        .result-display .status-message { font-size: 1em; margin-top: 4px; font-weight: 500; }
-        .status-safe .result-display { background-color: #eaf6ec; }
-        .status-warning .result-display { background-color: #fff8e1; }
-        .status-danger .result-display { background-color: #fdecea; }
-        .remove-btn { color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 8px; font-size: 0.9em; float: right; }
-        #settings-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; width: 80%; max-width: 500px; border-radius: 8px; }
-        #loading-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); justify-content: center; align-items: center; text-align: center; }
-        .spinner { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #what-if-planner { margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-color); }
-        .what-if-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        #what-if-result { border-radius: 8px; padding: 15px; margin-top: 20px; text-align: center; }
-        #what-if-result.status-safe { background-color: #eaf6ec; }
-        #what-if-result.status-warning { background-color: #fff8e1; }
-        #what-if-result.status-danger { background-color: #fdecea; }
-        @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } .subject-grid { grid-template-columns: 1fr; } .controls-grid { grid-template-columns: 1fr; } .what-if-grid { grid-template-columns: 1fr; } }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="loading-overlay"><div><div class="spinner"></div><p>Analyzing...</p></div></div>
+
     <div class="container">
         <div id="home-page">
             <header>
@@ -97,7 +19,8 @@
                 <div class="upload-wrapper">
                     <h4>Step 1: Timetable</h4>
                     <div id="upload-area-timetable" class="upload-area">
-                        <div class="upload-icon">📅</div><p>Paste, Drop, or Triple-Click</p>
+                        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAdASURBVHhe7Vt7UJNVGP7Ovbub3U3uBsmGhRAiihyQiIgoKoDFgKIgCC5y5YJLl4qFLi4dEVdeWOgH/YCLrqwo6IIuioDgCq6IihxEEuQmSTe5yd3Nbm5y9zu56e4mKUAkH5n+vC/fe868M+/vzHvveWcCMzMzMzMzMzMzMzPzXwuh67gOtYaiqL5jGk2jNJoRax30852GgP2g+2j184sWJ11dG/vQd1hpfP5F72UvNBrz8Dutg4rXf6502Wtc/b0w4+p7mG6i63I1n1e0/a6B1v7cprJd3c+rT/tP5t2+Q7vjN7yS/fCj6169hLzYkQ8h71s/9aG2sI5qL/UqWl7cZ1V9bO1m/wZ1m94+659+G0N82Cfnwg+s+vASrC832/P2h+64J2H5sI+74R+5vR+1h8a7P+b0b/vM/Zt03o53l9/0UvN8RhyGvbB3u/B68L8f/i+Xw/d//W7v3p/L+n+/5+2oE55N/8Kfnwg+s+vASrC9X/97/81L73A/d/8953fGv+/Yl5PzPum9FuzYl5PzceQ162V4f3/V4Rmq19y/h8q//e9FvyAmd9O/z/w/2H7v19/H8xYj/+/f/X97L/w4+se/AyrC1U/3d/8dY/vOdX/rV3dZ8h5v/Wvffqf/j3l1E+ZgB78KPrHrwEqwuV//df+v8f2vNf+/df+tXf/f/d9WvW/Z/XvX4YmZub+W2yL9q0H8iG3jTqPzV8Q/jM+f6P2aZ3v+3t2KblH7t+eG/6v9b9bH97314YVpL8z/5e2L3/p3V/Z/Lz334b/l5/I2b+l8+8e3PqP2a13/+3d+zbrD+t++b0wP/WvffpA+W/eX/r3/qP3b/V/D17Q/dD93/y/8Xv+h3a/68+e688H/P3/a/n7b/j9/z++F/7MP/B+e/y7r9/z/6H9v3/d7f+77/f++8//+O3z/f//6/0H/BwAAAABJRU5ErkJggg==" alt="Timetable Icon" class="upload-icon">
+                        <p>Paste, Drop, or Triple-Click</p>
                     </div>
                     <div class="upload-status-wrapper">
                         <p id="timetable-status" class="upload-status"></p>
@@ -107,7 +30,8 @@
                 <div class="upload-wrapper">
                     <h4>Step 2: Attendance Summary</h4>
                     <div id="upload-area-attendance" class="upload-area">
-                        <div class="upload-icon">📊</div><p>Paste, Drop, or Triple-Click</p>
+                        <img src="data:image/png;base64,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" alt="Attendance Icon" class="upload-icon">
+                        <p>Paste, Drop, or Triple-Click</p>
                     </div>
                     <div class="upload-status-wrapper">
                          <p id="attendance-status" class="upload-status"></p>
@@ -115,21 +39,23 @@
                     </div>
                 </div>
             </div>
-            <div class="upload-wrapper" style="margin-bottom: 20px;">
-                <h4>Step 3: Leave Details (Optional)</h4>
-                <div id="upload-area-leaves" class="upload-area">
-                    <div class="upload-icon">📄</div><p>Upload one or more leave screenshots</p>
-                </div>
-                <ul id="leave-files-list"></ul>
-                <button id="add-leave-file-btn" class="control-btn secondary-btn" style="margin-top: 10px;">+ Add Leave Screenshot</button>
-            </div>
             <input type="file" id="timetable-upload-input" accept="image/*">
             <input type="file" id="attendance-upload-input" accept="image/*">
-            <input type="file" id="leaves-upload-input" accept="image/*" multiple>
             <button id="analyze-btn" class="control-btn" disabled>Analyze Screenshots</button>
+            <div class="instructions">
+                <h3>How to Use</h3>
+                <ul>
+                    <li>Upload clean, uncropped screenshots of your weekly timetable and your latest attendance report.</li>
+                    <li>You can **paste** images from your clipboard, **drag & drop** files, or **triple-click** a box to browse files.</li>
+                    <li>Click **Analyze** to get your detailed attendance report!</li>
+                    <li>Use the **Settings** on the results page to set your goals and end date for accurate predictions.</li>
+                </ul>
+            </div>
         </div>
+
         <div id="results-page" class="hidden">
-            <header><h1>Your Attendance Analysis</h1>
+            <header>
+                <h1>Your Attendance Analysis</h1>
                 <div class="controls-grid" style="margin-top: 20px;">
                     <button id="start-over-btn" class="control-btn secondary-btn">Start Over</button>
                     <button id="settings-btn" class="control-btn secondary-btn">⚙️ Settings</button>
@@ -161,6 +87,7 @@
             <button id="add-subject-btn" class="control-btn secondary-btn" style="width: 100%; margin-top: 10px;">➕ Add Subject Manually</button>
         </div>
     </div>
+
     <div id="settings-modal">
         <div class="modal-content">
             <span class="close" style="float:right; cursor:pointer; font-size: 1.5em;">&times;</span>
@@ -172,343 +99,6 @@
         </div>
     </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // --- Element References ---
-    const homePage = document.getElementById('home-page');
-    const resultsPage = document.getElementById('results-page');
-    const loadingOverlay = document.getElementById('loading-overlay');
-    const aggregateSummary = document.getElementById('aggregate-summary');
-    const aggregatePercentageDisplay = document.getElementById('aggregate-percentage');
-    const aggregateStatusDisplay = document.getElementById('aggregate-status');
-    const aggregateBunkSummary = document.getElementById('aggregate-bunk-summary');
-    const tabs = document.querySelectorAll('.tab-link');
-    const tabContents = document.querySelectorAll('.tab-content');
-    const uploadAreaTimetable = document.getElementById('upload-area-timetable');
-    const uploadAreaAttendance = document.getElementById('upload-area-attendance');
-    const uploadAreaLeaves = document.getElementById('upload-area-leaves');
-    const timetableUploadInput = document.getElementById('timetable-upload-input');
-    const attendanceUploadInput = document.getElementById('attendance-upload-input');
-    const leavesUploadInput = document.getElementById('leaves-upload-input');
-    const timetableStatus = document.getElementById('timetable-status');
-    const attendanceStatus = document.getElementById('attendance-status');
-    const leaveFilesList = document.getElementById('leave-files-list');
-    const clearTimetableBtn = document.getElementById('clear-timetable-btn');
-    const clearAttendanceBtn = document.getElementById('clear-attendance-btn');
-    const analyzeBtn = document.getElementById('analyze-btn');
-    const addLeaveFileBtn = document.getElementById('add-leave-file-btn');
-    const subjectsContainer = document.getElementById('subjects-container');
-    const bunkContainer = document.getElementById('bunk-cards-container');
-    const addSubjectBtn = document.getElementById('add-subject-btn');
-    const startOverBtn = document.getElementById('start-over-btn');
-    const whatIfAttendedInput = document.getElementById('what-if-attended');
-    const whatIfHeldInput = document.getElementById('what-if-held');
-    const whatIfResult = document.getElementById('what-if-result');
-    const settingsModal = document.getElementById('settings-modal');
-    const settingsBtn = document.getElementById('settings-btn');
-    const closeModal = document.querySelector('.close');
-    const saveSettingsBtn = document.getElementById('save-settings-btn');
-    const endDateInput = document.getElementById('end-date');
-    const goalPercentageInput = document.getElementById('goal-percentage');
-    const aggregateGoalPercentageInput = document.getElementById('aggregate-goal-percentage');
-    
-    // --- State Variables ---
-    let settings = {};
-    let allSubjectsData = [];
-    let uploadedTimetableFile = null;
-    let uploadedAttendanceFile = null;
-    let uploadedLeaveFiles = [];
-    
-    // --- Page Navigation & State ---
-    const showHomePage = () => {
-        resultsPage.classList.add('hidden');
-        homePage.classList.remove('hidden');
-        handleTimetableFile(null);
-        handleAttendanceFile(null);
-        uploadedLeaveFiles = [];
-        checkUploads();
-    };
-    const showResultsPage = () => {
-        homePage.classList.add('hidden');
-        resultsPage.classList.remove('hidden');
-    };
-    const checkUploads = () => {
-        timetableStatus.textContent = uploadedTimetableFile ? uploadedTimetableFile.name : 'No file selected.';
-        uploadAreaTimetable.classList.toggle('uploaded', !!uploadedTimetableFile);
-        timetableStatus.classList.toggle('success', !!uploadedTimetableFile);
-        clearTimetableBtn.classList.toggle('hidden', !uploadedTimetableFile);
-        attendanceStatus.textContent = uploadedAttendanceFile ? uploadedAttendanceFile.name : 'No file selected.';
-        uploadAreaAttendance.classList.toggle('uploaded', !!uploadedAttendanceFile);
-        attendanceStatus.classList.toggle('success', !!uploadedAttendanceFile);
-        clearAttendanceBtn.classList.toggle('hidden', !uploadedAttendanceFile);
-        leaveFilesList.innerHTML = '';
-        if (uploadedLeaveFiles.length > 0) {
-            const list = document.createElement('ul');
-            uploadedLeaveFiles.forEach((file, index) => {
-                const li = document.createElement('li');
-                li.textContent = file.name;
-                const removeBtn = document.createElement('button');
-                removeBtn.textContent = '×';
-                removeBtn.className = 'clear-btn';
-                removeBtn.onclick = () => {
-                    uploadedLeaveFiles.splice(index, 1);
-                    checkUploads();
-                };
-                li.appendChild(removeBtn);
-                list.appendChild(li);
-            });
-            leaveFilesList.appendChild(list);
-        }
-        analyzeBtn.disabled = !(uploadedTimetableFile && uploadedAttendanceFile);
-    };
-
-    // --- Holiday Calculation Logic ---
-    const isThirdSaturday = (date) => (date.getDay() === 6 && date.getDate() >= 15 && date.getDate() <= 21);
-    const isHoliday = (date) => (isThirdSaturday(date));
-
-    // --- Core Calculation & Projection Functions ---
-    const countFutureClasses = (subjectName) => {
-        if (!settings.endDate || !settings.timetable || !subjectName) return 0;
-        let classCount = 0;
-        const today = new Date();
-        const endDate = new Date(settings.endDate);
-        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-            if (isHoliday(d)) continue;
-            const dayName = d.toLocaleString('en-US', { weekday: 'long' });
-            const classesToday = settings.timetable[subjectName.toUpperCase()] ? settings.timetable[dayName].filter(s => s.toUpperCase() === subjectName.toUpperCase()) : [];
-            classCount += classesToday.length;
-        }
-        return classCount;
-    };
-    
-    const findDateForNthClass = (subjectName, neededClasses) => {
-        if (!settings.endDate || !settings.timetable || !subjectName || neededClasses <= 0) return { date: null, days: Infinity };
-        let classCount = 0, daysCount = 0;
-        const today = new Date();
-        const endDate = new Date(settings.endDate);
-        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
-            daysCount++;
-            if (isHoliday(d)) continue;
-            const dayName = d.toLocaleString('en-US', { weekday: 'long' });
-            const classesToday = settings.timetable[subjectName.toUpperCase()] ? settings.timetable[dayName].filter(s => s.toUpperCase() === subjectName.toUpperCase()) : [];
-            classCount += classesToday.length;
-            if (classCount >= neededClasses) return { date: d, days: daysCount };
-        }
-        return { date: null, days: Infinity };
-    };
-
-    // --- Main Calculation Orchestrator ---
-    const runAllCalculations = () => {
-        if (allSubjectsData.length === 0) return;
-
-        let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
-        let totalCcLeaves = 0, totalMedicalLeaves = 0;
-        
-        allSubjectsData.forEach(subject => {
-            totalAttended += subject.attended;
-            totalHeld += subject.total;
-            totalFutureClasses += countFutureClasses(subject.name);
-            totalCcLeaves += subject.cc_leaves || 0;
-            totalMedicalLeaves += subject.medical_leaves || 0;
-        });
-
-        const prelimFinalAttended = totalAttended + totalCcLeaves + totalFutureClasses;
-        const prelimFinalTotal = totalHeld + totalFutureClasses;
-        const prelimFinalPercent = prelimFinalTotal > 0 ? (prelimFinalAttended / prelimFinalTotal) * 100 : 0;
-
-        const medicalLeavesAreValid = (prelimFinalPercent >= 75 && prelimFinalPercent <= 85);
-
-        allSubjectsData.forEach(subject => {
-            let effectiveAttended = subject.attended + (subject.cc_leaves || 0);
-            if (medicalLeavesAreValid) {
-                effectiveAttended += subject.medical_leaves || 0;
-            }
-            subject.effectiveAttended = effectiveAttended;
-        });
-        
-        subjectsContainer.innerHTML = '';
-        allSubjectsData.forEach(subject => {
-            const card = createSubjectCardDOM(subject);
-            subjectsContainer.appendChild(card);
-            calculateAttendanceUI(card);
-        });
-
-        calculateAggregateAttendance();
-        calculateWhatIf();
-    };
-    
-    // --- UI Update & Calculation Functions ---
-    const calculateBunkPlanner = () => { /* ... Identical to previous version ... */ };
-    const calculateWhatIf = () => { /* ... Identical to previous version ... */ };
-    const calculateAggregateAttendance = () => { /* ... Identical to previous version ... */ };
-    const updateAggregateUI = (result) => { /* ... Identical to previous version ... */ };
-    
-    const calculateAttendanceUI = (card) => {
-        const subjectName = card.dataset.subjectName;
-        const subject = allSubjectsData.find(s => s.name === subjectName);
-        if (!subject) return;
-
-        const { total, effectiveAttended } = subject;
-        const goalPercentage = settings.goalPercentage || 75;
-        if (total <= 0) {
-            updateCardUI(card, { percentage: 0, status: "Enter valid numbers.", className: '' });
-            return;
-        }
-        const currentPercentage = (effectiveAttended / total) * 100;
-        let status = '', className = '';
-        if (currentPercentage >= goalPercentage) {
-            status = `Per-subject goal met.`;
-            className = 'status-safe';
-        } else {
-            const futureClasses = countFutureClasses(subjectName);
-            const maxPossibleAttended = effectiveAttended + futureClasses;
-            const maxPossibleTotal = total + futureClasses;
-            const maxPossiblePercentage = maxPossibleTotal > 0 ? (maxPossibleAttended / maxPossibleTotal) * 100 : 0;
-            if (maxPossiblePercentage < goalPercentage) {
-                const goalAttended = Math.ceil((goalPercentage / 100) * maxPossibleTotal);
-                const missedByHrs = goalAttended - maxPossibleAttended;
-                status = `Missed target by ${missedByHrs} hr(s).`;
-                className = 'status-danger';
-            } else {
-                const neededHrs = Math.ceil(((goalPercentage / 100) * total - effectiveAttended) / (1 - (goalPercentage / 100)));
-                const projection = findDateForNthClass(subjectName, neededHrs);
-                const formattedDate = projection.date ? projection.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
-                status = `${neededHrs} more hrs needed. <br>Goal reached in ~${projection.days} days (${formattedDate})`;
-                className = 'status-warning';
-            }
-        }
-        updateCardUI(card, { percentage: currentPercentage, status, className });
-    };
-
-    const updateCardUI = (card, result) => {
-        card.className = 'subject-card';
-        if (result.className) card.classList.add(result.className);
-        const resultDisplay = card.querySelector('.result-display');
-        resultDisplay.innerHTML = `<div class="percentage">${result.percentage.toFixed(2)}%</div><div class="status-message">${result.status}</div>`;
-    };
-
-    const createSubjectCardDOM = (data) => {
-        const card = document.createElement('div');
-        card.className = 'subject-card';
-        card.dataset.subjectName = data.name; // Link card to data
-        card.innerHTML = `<button class="remove-btn">&times;</button><div class="subject-grid"><div class="input-group"><label>Subject Name</label><input type="text" class="subject-name-input" value="${data.name}" readonly></div><div class="input-group"><label>Attended</label><input type="number" class="attended-input" value="${data.attended}"></div><div class="input-group"><label>Total Held</label><input type="number" class="total-input" value="${data.total}"></div></div><div class="result-display"><div class="status-message">Calculating...</div></div>`;
-        
-        const updateDataAndRecalculate = () => {
-            const subject = allSubjectsData.find(s => s.name === data.name);
-            if(subject){
-                subject.attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
-                subject.total = parseInt(card.querySelector('.total-input').value, 10) || 0;
-                saveData();
-                runAllCalculations();
-            }
-        };
-        card.querySelector('.attended-input').addEventListener('input', updateDataAndRecalculate);
-        card.querySelector('.total-input').addEventListener('input', updateDataAndRecalculate);
-        
-        card.querySelector('.remove-btn').addEventListener('click', () => { 
-            allSubjectsData = allSubjectsData.filter(s => s.name !== data.name);
-            card.remove(); 
-            saveData();
-            runAllCalculations();
-        });
-        return card;
-    };
-
-    const saveData = () => {
-        localStorage.setItem('attendanceData', JSON.stringify(allSubjectsData));
-    };
-
-    const saveSettings = () => {
-        const goalPercentage = parseInt(goalPercentageInput.value, 10) || 75;
-        const aggregateGoalPercentage = parseInt(aggregateGoalPercentageInput.value, 10) || 75;
-        settings = { 
-            endDate: endDateInput.value, 
-            goalPercentage, 
-            aggregateGoalPercentage, 
-            timetable: settings.timetable 
-        };
-        localStorage.setItem('attendanceSettings', JSON.stringify(settings));
-        settingsModal.style.display = 'none';
-        runAllCalculations();
-        if (document.querySelector('.tab-link[data-tab="bunk"]').classList.contains('active')) {
-            calculateBunkPlanner();
-        }
-    };
-    const loadSettings = () => {
-        const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
-        settings = savedSettings || { goalPercentage: 75, aggregateGoalPercentage: 75, timetable: null };
-        goalPercentageInput.value = settings.goalPercentage || 75;
-        aggregateGoalPercentageInput.value = settings.aggregateGoalPercentage || 75;
-        endDateInput.value = settings.endDate || '';
-    };
-
-    const handleAnalysis = async () => { /* ... Identical to previous version ... */ };
-    const analyzeImage = (file, endpoint, type) => { /* ... Identical to previous version ... */ };
-    const analyzeMultipleImages = (files, endpoint, type) => { /* ... Identical to previous version ... */ };
-    const fileToBase64 = (file) => { /* ... Identical to previous version ... */ };
-    const handleTimetableFile = (file) => { /* ... Identical to previous version ... */ };
-    const handleAttendanceFile = (file) => { /* ... Identical to previous version ... */ };
-
-    // --- Event Listeners ---
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(item => item.classList.remove('active'));
-            tab.classList.add('active');
-            const targetId = tab.dataset.tab + '-content';
-            tabContents.forEach(content => { content.classList.toggle('active', content.id === targetId); });
-            if (tab.dataset.tab === 'bunk') {
-                calculateBunkPlanner();
-            }
-        });
-    });
-    uploadAreaTimetable.addEventListener('click', (e) => { if (e.detail === 3) timetableUploadInput.click(); });
-    timetableUploadInput.addEventListener('change', (e) => handleTimetableFile(e.target.files[0]));
-    uploadAreaAttendance.addEventListener('click', (e) => { if (e.detail === 3) attendanceUploadInput.click(); });
-    attendanceUploadInput.addEventListener('change', (e) => handleAttendanceFile(e.target.files[0]));
-    addLeaveFileBtn.addEventListener('click', () => leavesUploadInput.click());
-    leavesUploadInput.addEventListener('change', (e) => {
-        for (const file of e.target.files) { uploadedLeaveFiles.push(file); }
-        checkUploads();
-    });
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { document.body.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false); });
-    uploadAreaTimetable.addEventListener('drop', (e) => handleTimetableFile(e.dataTransfer.files[0]));
-    uploadAreaAttendance.addEventListener('drop', (e) => handleAttendanceFile(e.dataTransfer.files[0]));
-    uploadAreaLeaves.addEventListener('drop', (e) => {
-        for (const file of e.dataTransfer.files) { uploadedLeaveFiles.push(file); }
-        checkUploads();
-    });
-    document.addEventListener('paste', (e) => {
-        const items = e.clipboardData.items;
-        let imageFile = null;
-        for (const item of items) { if (item.type.indexOf('image') !== -1) { imageFile = item.getAsFile(); break; } }
-        if (!imageFile) return;
-        if (!uploadedTimetableFile) { handleTimetableFile(imageFile); } 
-        else if (!uploadedAttendanceFile) { handleAttendanceFile(imageFile); }
-        else { uploadedLeaveFiles.push(imageFile); checkUploads(); }
-        e.preventDefault();
-    });
-    clearTimetableBtn.addEventListener('click', () => handleTimetableFile(null));
-    clearAttendanceBtn.addEventListener('click', () => handleAttendanceFile(null));
-    analyzeBtn.addEventListener('click', handleAnalysis);
-    startOverBtn.addEventListener('click', showHomePage);
-    addSubjectBtn.addEventListener('click', () => { 
-        // This needs to add a new subject to the `allSubjectsData` array
-        const newSubjectName = prompt("Enter new subject name:");
-        if (newSubjectName && !allSubjectsData.find(s => s.name === newSubjectName.toUpperCase())) {
-            allSubjectsData.push({ name: newSubjectName.toUpperCase(), attended: 0, total: 0, cc_leaves: 0, medical_leaves: 0, effectiveAttended: 0 });
-            runAllCalculations();
-            saveData();
-        }
-    });
-    settingsBtn.addEventListener('click', () => { loadSettings(); settingsModal.style.display = 'block'; });
-    closeModal.addEventListener('click', () => settingsModal.style.display = 'none');
-    window.addEventListener('click', (e) => { if (e.target == settingsModal) settingsModal.style.display = 'none'; });
-    saveSettingsBtn.addEventListener('click', saveSettings);
-    whatIfAttendedInput.addEventListener('input', calculateWhatIf);
-    whatIfHeldInput.addEventListener('input', calculateWhatIf);
-    loadSettings();
-    checkUploads();
-});
-</script>
+    <script src="script.js"></script>
 </body>
 </html>
