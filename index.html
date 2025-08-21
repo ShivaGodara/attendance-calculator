@@ -37,7 +37,6 @@
         #settings-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
         .modal-content h2 { margin-top: 0; }
-        #timetable-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
         #holidays-list { list-style-type: none; padding: 0; }
         #loading-overlay { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); justify-content: center; align-items: center; text-align: center; }
         .spinner { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
@@ -78,9 +77,7 @@
                 <label for="end-date">Semester End Date</label>
                 <input type="date" id="end-date">
             </div>
-            <h3 style="margin-top: 20px;">Weekly Timetable</h3>
-            <p style="font-size: 0.8em; color: #606770;">Enter subject names exactly as they appear in your attendance list.</p>
-            <div id="timetable-grid"></div>
+            
             <h3 style="margin-top: 20px;">Holidays</h3>
             <div class="input-group" style="display:flex; flex-direction: row; gap: 10px;">
                 <input type="date" id="holiday-date" style="flex-grow: 1;">
@@ -105,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = document.querySelector('.close');
     const saveSettingsBtn = document.getElementById('save-settings-btn');
     const endDateInput = document.getElementById('end-date');
-    const timetableGrid = document.getElementById('timetable-grid');
     const holidayDateInput = document.getElementById('holiday-date');
     const addHolidayBtn = document.getElementById('add-holiday-btn');
     const holidaysList = document.getElementById('holidays-list');
@@ -113,8 +109,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const TARGET_PERCENTAGE = 75;
     let settings = {};
 
+    // --- FIXED WEEKLY TIMETABLE ---
+    // This timetable is based on your provided image.
+    // Subject names are written in full to match the attendance sheet.
+    const FIXED_TIMETABLE = {
+        'Monday': 'ADVANCED PYTHON, CLOUD COMPUTING',
+        'Tuesday': 'MINI PROJECT, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING, CYBER SECURITY, CLOUD COMPUTING',
+        'Wednesday': 'CLOUD COMPUTING, ADVANCED PYTHON, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING',
+        'Thursday': 'ARTIFICIAL INTELLIGENCE & MACHINE LEARNING, CYBER SECURITY, ADVANCED PYTHON',
+        'Friday': 'CLOUD COMPUTING, ADVANCED PYTHON, CYBER SECURITY, MINI PROJECT',
+        'Saturday': 'CYBER SECURITY, MINI PROJECT, ARTIFICIAL INTELLIGENCE & MACHINE LEARNING'
+    };
+
     const findDateForNthClass = (subjectName, neededClasses) => {
-        if (!settings.endDate || !settings.timetable || !subjectName || neededClasses <= 0) {
+        if (!settings.endDate || !subjectName || neededClasses <= 0) {
             return { date: null, days: Infinity };
         }
         
@@ -123,15 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         const endDate = new Date(settings.endDate);
         const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
+        const timetable = FIXED_TIMETABLE; // Always use the fixed timetable
 
         for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
             daysCount++;
             if (holidays.includes(d.toDateString())) continue;
 
             const dayName = d.toLocaleString('en-US', { weekday: 'long' });
-            const timetableEntry = settings.timetable[dayName] || '';
+            const timetableEntry = timetable[dayName] || '';
 
-            if (timetableEntry.toLowerCase().includes(subjectName.toLowerCase())) {
+            if (timetableEntry.toUpperCase().includes(subjectName.toUpperCase())) {
                 classCount++;
             }
 
@@ -230,31 +239,26 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const saveSettings = () => {
-        const timetable = {};
-        document.querySelectorAll('#timetable-grid input').forEach(input => {
-            timetable[input.dataset.day] = input.value;
-        });
+        // Timetable is no longer saved, as it is fixed. We only save end date and holidays.
         const holidays = Array.from(holidaysList.querySelectorAll('li')).map(li => li.dataset.date);
         
-        settings = { endDate: endDateInput.value, timetable, holidays };
-        localStorage.setItem('attendanceSettings', JSON.stringify(settings));
+        settings = { 
+            endDate: endDateInput.value, 
+            holidays: holidays,
+            timetable: FIXED_TIMETABLE // Always use the fixed timetable
+        };
+        localStorage.setItem('attendanceSettings', JSON.stringify({ endDate: settings.endDate, holidays: settings.holidays }));
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
     };
 
     const loadSettings = () => {
+        // Load only end date and holidays. Timetable is always fixed.
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
-        settings = savedSettings || { timetable: {}, holidays: [] };
+        settings = savedSettings || { holidays: [] };
+        settings.timetable = FIXED_TIMETABLE; // Crucially, set the fixed timetable here.
+
         endDateInput.value = settings.endDate || '';
-        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        timetableGrid.innerHTML = '';
-        days.forEach(day => {
-            timetableGrid.innerHTML += `
-                <div class="input-group">
-                    <label>${day}</label>
-                    <input type="text" data-day="${day}" placeholder="Subjects..." value="${settings.timetable[day] || ''}">
-                </div>`;
-        });
         holidaysList.innerHTML = '';
         (settings.holidays || []).forEach(addHolidayToList);
     };
