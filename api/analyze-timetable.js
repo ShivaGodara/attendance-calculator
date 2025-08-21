@@ -25,16 +25,16 @@ module.exports = async (req, res) => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-      You are an AI expert at parsing weekly class schedule images.
+      You are an AI expert at parsing weekly class schedule images and converting them to a structured JSON format.
       Your task is to create a JSON object representing the timetable.
-      The keys must be the days of the week ('Monday', 'Tuesday', etc.).
+      The keys of the object must be the days of the week in English (e.g., 'Monday', 'Tuesday').
       The value for each key must be an array of strings, where each string is a subject name.
-      RULES:
-      1. Extract only the subject name and ignore subject codes (e.g., from 'ADVANCED PYTHON\\nBCA303-5', extract 'ADVANCED PYTHON').
-      2. List a subject for every period it appears. If 'CLOUD COMPUTING' appears twice, add it to the array twice.
-      3. Return all subject names in ALL CAPS.
-      4. Ignore empty slots or 'LUNCH'.
-      5. Output only the raw JSON object, with no other text or markdown.
+      IMPORTANT RULES:
+      1. Extract only the subject name and ignore any subject codes below it (e.g., from 'ADVANCED PYTHON\\nBCA303-5', extract only 'ADVANCED PYTHON').
+      2. List a subject for every period it appears. If 'CLOUD COMPUTING' appears twice on Wednesday, add 'CLOUD COMPUTING' to the Wednesday array twice.
+      3. Ensure all subject names are returned in ALL CAPS to maintain consistency.
+      4. Ignore any columns or cells that are empty or designated as 'LUNCH'.
+      5. The final output must be only the raw JSON object, with no other text, explanations, or markdown formatting like \`\`\`json.
     `;
     
     const imageBuffer = Buffer.from(image, 'base64');
