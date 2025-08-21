@@ -33,15 +33,27 @@ module.exports = async (req, res) => {
     // Get the Gemini Pro Vision model
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const prompt = `
-      You are an expert at extracting structured data from images of a student's attendance portal.
-      Analyze this screenshot. Extract the data into a JSON array.
-      Each object in the array should represent one subject and have three keys:
-      1. "name" (string): The subject's name, which might include a code.
-      2. "attended" (integer): The number of classes attended. This is the first number in the "Attended/Total" column.
-      3. "total" (integer): The total number of classes held. This is the second number in the "Attended/Total" column.
-      Ignore any summary rows or rows that are not subjects. The final output must only be the JSON array, with no other text or markdown formatting.
-    `;
+    // THIS IS THE NEW, IMPROVED CODE
+const prompt = `
+  You are an expert at analyzing and consolidating data from a student's attendance portal screenshot.
+  For each distinct "Subject Name", you must combine its "Theory" and "Practical" rows into a single entry.
+
+  Your task is to:
+  1.  Identify each unique subject (e.g., "MINI PROJECT", "ARTIFICIAL INTELLIGENCE & MACHINE LEARNING", etc.).
+  2.  For each subject, find its "Theory" and "Practical" rows.
+  3.  Sum the values from the "Conducted" column for both rows to get the total classes held.
+  4.  Sum the values from the "Present" column for both rows to get the total classes attended.
+  5.  Create a single JSON object for that subject with the combined totals.
+
+  The final output must be a clean JSON array. Each object in the array must have exactly three keys:
+  - "name" (string): The subject's full name.
+  - "attended" (integer): The SUM of "Present" for Theory and Practical.
+  - "total" (integer): The SUM of "Conducted" for Theory and Practical.
+
+  For example, for the subject 'ADVANCED PYTHON', you should sum the 'Conducted' values (28.0 + 17.0 = 45) and the 'Present' values (23.0 + 13.0 = 36). The resulting JSON object would be {"name": "ADVANCED PYTHON", "attended": 36, "total": 45}.
+
+  Process all subjects in the image this way. Do not output any text, explanations, or markdown formatting like \`\`\`json. Only output the final JSON array.
+`;
     
     const imageBuffer = Buffer.from(image, 'base64');
     const imagePart = fileToGenerativePart(imageBuffer, mimeType);
@@ -62,4 +74,5 @@ module.exports = async (req, res) => {
     console.error("Error processing request:", error);
     res.status(500).json({ error: "Failed to analyze image.", details: error.message });
   }
+
 };
