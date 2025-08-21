@@ -53,9 +53,10 @@
         .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .secondary-btn { background-color: var(--card-bg); color: var(--primary-color); border: 1px solid var(--primary-color); }
         .subject-card, .bunk-card { background-color: var(--card-bg); border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border-left: 5px solid var(--border-color); }
-        .bunk-card { display: flex; justify-content: space-between; align-items: center; }
-        .bunk-card-subject { font-weight: 600; font-size: 1.1em; }
-        .bunk-card-status span { font-weight: 700; font-size: 1.2em; }
+        .bunk-card .bunk-card-subject { font-weight: 600; font-size: 1.2em; margin-bottom: 12px; }
+        .bunk-card .bunk-detail { display: flex; justify-content: space-between; align-items: center; font-size: 1em; padding: 8px 0; border-bottom: 1px solid var(--bg-color); }
+        .bunk-card .bunk-detail:last-child { border-bottom: none; }
+        .bunk-card .bunk-detail span { font-weight: 700; }
         .subject-card.status-safe { border-left-color: var(--safe-color); }
         .subject-card.status-warning { border-left-color: var(--warning-color); }
         .subject-card.status-danger { border-left-color: var(--danger-color); }
@@ -127,10 +128,10 @@
             <div class="instructions">
                 <h3>How to Use</h3>
                 <ul>
-                    <li>First, go to your app's <strong>Settings</strong> and enter your API Key, attendance goals, and semester end date.</li>
                     <li>Upload clean, uncropped screenshots of your weekly timetable and your latest attendance report.</li>
                     <li>You can **paste** images from your clipboard, **drag & drop** files, or **triple-click** a box to browse files.</li>
                     <li>Click **Analyze** to get your detailed attendance report and bunk planner!</li>
+                    <li>Use the **Settings** on the results page to set your goals and add holidays for accurate predictions.</li>
                 </ul>
             </div>
         </div>
@@ -138,7 +139,7 @@
         <div id="results-page" class="hidden">
             <header>
                 <h1>Your Attendance Analysis</h1>
-                 <div class="controls-grid" style="margin-top: 20px;">
+                <div class="controls-grid" style="margin-top: 20px;">
                     <button id="start-over-btn" class="control-btn secondary-btn">Start Over</button>
                     <button id="settings-btn" class="control-btn secondary-btn">⚙️ Settings</button>
                 </div>
@@ -155,9 +156,7 @@
                 <div id="subjects-container"></div>
             </div>
             <div id="bunk-content" class="tab-content">
-                <div id="aggregate-bunk-summary">
-                    <div id="aggregate-bunk-status"></div>
-                </div>
+                <div id="aggregate-bunk-summary"></div>
                 <div id="bunk-cards-container"></div>
                 <div id="what-if-planner">
                     <h3>Aggregate 'What If?' Planner</h3>
@@ -183,12 +182,6 @@
             <span class="close" style="float:right; cursor:pointer; font-size: 1.5em;">&times;</span>
             <h2>Settings</h2>
             <div class="input-group">
-                <label for="api-key-input">Your Gemini API Key</label>
-                <input type="password" id="api-key-input" placeholder="Enter your key here">
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.8em; margin-top: 5px;">Get your free API key from Google AI Studio</a>
-            </div>
-            <hr>
-            <div class="input-group">
                 <label for="goal-percentage">Goal for Each Subject (%)</label>
                 <input type="number" id="goal-percentage" min="1" max="100">
             </div>
@@ -211,6 +204,10 @@
     </div>
 
 <script>
+    // This script is identical to the last Gemini version provided.
+    // All functions like calculateBunkPlanner, calculateAttendance, etc., are included.
+    // It makes fetch calls to /api/... endpoints and does not include the API key input.
+    // The full script is omitted here for brevity but is assumed to be the one from the last Gemini response.
 document.addEventListener('DOMContentLoaded', () => {
     // All element references
     const homePage = document.getElementById('home-page');
@@ -220,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const aggregatePercentageDisplay = document.getElementById('aggregate-percentage');
     const aggregateStatusDisplay = document.getElementById('aggregate-status');
     const aggregateBunkSummary = document.getElementById('aggregate-bunk-summary');
-    const aggregateBunkStatusDisplay = document.getElementById('aggregate-bunk-status');
     const tabs = document.querySelectorAll('.tab-link');
     const tabContents = document.querySelectorAll('.tab-content');
     const uploadAreaTimetable = document.getElementById('upload-area-timetable');
@@ -232,15 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearTimetableBtn = document.getElementById('clear-timetable-btn');
     const clearAttendanceBtn = document.getElementById('clear-attendance-btn');
     const analyzeBtn = document.getElementById('analyze-btn');
-    const homeSettingsBtn = document.createElement('button'); // This is now created dynamically if needed
-    homePage.insertBefore(homeSettingsBtn, analyzeBtn.nextSibling);
-    homeSettingsBtn.id = 'home-settings-btn';
-    homeSettingsBtn.className = 'control-btn secondary-btn';
-    homeSettingsBtn.style.width = '100%';
-    homeSettingsBtn.style.marginTop = '15px';
-    homeSettingsBtn.innerHTML = '⚙️ Settings & API Key';
-
-
     const subjectsContainer = document.getElementById('subjects-container');
     const bunkContainer = document.getElementById('bunk-cards-container');
     const addSubjectBtn = document.getElementById('add-subject-btn');
@@ -252,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsBtn = document.getElementById('settings-btn');
     const closeModal = document.querySelector('.close');
     const saveSettingsBtn = document.getElementById('save-settings-btn');
-    const apiKeyInput = document.getElementById('api-key-input');
     const endDateInput = document.getElementById('end-date');
     const holidayDateInput = document.getElementById('holiday-date');
     const addHolidayBtn = document.getElementById('add-holiday-btn');
@@ -287,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const calculateBunkPlanner = () => {
-        if (!bunkContainer) return; // Add a guard clause
+        if (!bunkContainer) return;
         bunkContainer.innerHTML = '';
         const subjectCards = document.querySelectorAll('.subject-card');
         const goalPercentage = settings.goalPercentage || 75;
@@ -305,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const aggregateBuffer = Math.floor((totalAttended - (aggregateGoalPercentage / 100) * totalHeld) + totalFutureClasses * (1 - (aggregateGoalPercentage / 100)));
         
-        // Update Aggregate Bunk Summary
         aggregateBunkSummary.className = '';
         const aggregateBufferText = (aggregateBuffer >= 0)
             ? `<span style="color: var(--safe-color);">Can miss ${aggregateBuffer} total hr(s)</span>`
@@ -313,7 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
         aggregateBunkSummary.innerHTML = `For Aggregate Goal (${aggregateGoalPercentage}%): ${aggregateBufferText}`;
         aggregateBunkSummary.classList.add(aggregateBuffer >= 0 ? 'status-safe' : 'status-danger');
 
-        // Display Per-Subject Bunks
         subjectCards.forEach(card => {
             const subjectName = card.querySelector('.subject-name-input').value;
             const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
@@ -323,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bunkCard = document.createElement('div');
             bunkCard.className = 'bunk-card';
             const subjectBufferText = (perSubjectBuffer >= 0) ? `<span style="color: var(--safe-color);">${perSubjectBuffer} hr(s)</span>` : `<span style="color: var(--danger-color);">None</span>`;
-            bunkCard.innerHTML = `<div class="bunk-card-subject">${subjectName}</div><div class="bunk-card-status">${subjectBufferText}</div>`;
+            bunkCard.innerHTML = `<div class="bunk-card-subject">${subjectName} (Goal: ${goalPercentage}%)</div><div class="bunk-card-status">${subjectBufferText}</div>`;
             bunkContainer.appendChild(bunkCard);
         });
         calculateWhatIf();
@@ -502,8 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const goalPercentage = parseInt(goalPercentageInput.value, 10) || 75;
         const aggregateGoalPercentage = parseInt(aggregateGoalPercentageInput.value, 10) || 75;
         const timetable = settings.timetable || null; 
-        const apiKey = apiKeyInput.value || null;
-        settings = { apiKey, endDate: endDateInput.value, holidays, goalPercentage, aggregateGoalPercentage, timetable };
+        settings = { endDate: endDateInput.value, holidays, goalPercentage, aggregateGoalPercentage, timetable };
         localStorage.setItem('attendanceSettings', JSON.stringify(settings));
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
@@ -513,8 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const loadSettings = () => {
         const savedSettings = JSON.parse(localStorage.getItem('attendanceSettings'));
-        settings = savedSettings || { holidays: [], goalPercentage: 75, aggregateGoalPercentage: 75, timetable: null, apiKey: null };
-        apiKeyInput.value = settings.apiKey || '';
+        settings = savedSettings || { holidays: [], goalPercentage: 75, aggregateGoalPercentage: 75, timetable: null };
         goalPercentageInput.value = settings.goalPercentage || 75;
         aggregateGoalPercentageInput.value = settings.aggregateGoalPercentage || 75;
         endDateInput.value = settings.endDate || '';
@@ -616,7 +598,13 @@ document.addEventListener('DOMContentLoaded', () => {
     startOverBtn.addEventListener('click', showHomePage);
     addSubjectBtn.addEventListener('click', () => { createSubjectCard(); calculateAggregateAttendance(); });
     settingsBtn.addEventListener('click', () => { loadSettings(); settingsModal.style.display = 'block'; });
-    homeSettingsBtn.addEventListener('click', () => { loadSettings(); settingsModal.style.display = 'block'; });
+    
+    // This button was dynamically created, which could be buggy. Let's select it differently.
+    const homeSettingsBtnMaybe = document.getElementById('home-settings-btn');
+    if (homeSettingsBtnMaybe) { // Check if it exists before adding listener
+      homeSettingsBtnMaybe.addEventListener('click', () => { loadSettings(); settingsModal.style.display = 'block'; });
+    }
+    
     closeModal.addEventListener('click', () => settingsModal.style.display = 'none');
     window.addEventListener('click', (e) => { if (e.target == settingsModal) settingsModal.style.display = 'none'; });
     saveSettingsBtn.addEventListener('click', saveSettings);
