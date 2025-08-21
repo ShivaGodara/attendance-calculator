@@ -34,7 +34,6 @@ module.exports = async (req, res) => {
       4. Sum the values from the "Present" column for both rows to get the total classes attended.
       5. Create a single JSON object for that subject with the combined totals.
       The final output must be a clean JSON array. Each object must have three keys: "name", "attended", and "total".
-      For example, for 'ADVANCED PYTHON', sum Conducted (28.0 + 17.0 = 45) and Present (23.0 + 13.0 = 36). The result is {"name": "ADVANCED PYTHON", "attended": 36, "total": 45}.
       Process all subjects. Do not output any text, explanations, or markdown formatting. Only output the final JSON array.
     `;
     
