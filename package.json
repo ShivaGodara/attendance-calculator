@@ -1,8 +1,8 @@
 {
   "name": "ai-attendance-calculator",
   "version": "1.0.0",
-  "description": "AI-Powered Attendance Calculator using OpenAI",
+  "description": "AI-Powered Attendance Calculator using Google Gemini",
   "dependencies": {
-    "openai": "^4.29.2"
+    "@google/generative-ai": "^0.11.3"
   }
 }
