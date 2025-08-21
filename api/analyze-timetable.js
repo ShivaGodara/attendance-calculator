@@ -1,8 +1,15 @@
-const OpenAI = require("openai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+function fileToGenerativePart(buffer, mimeType) {
+  return {
+    inlineData: {
+      data: buffer.toString("base64"),
+      mimeType,
+    },
+  };
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -15,7 +22,9 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "Image data and mimeType are required." });
     }
 
-    const timetablePrompt = `
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
       You are an AI expert at parsing weekly class schedule images and converting them to a structured JSON format.
       Your task is to create a JSON object representing the timetable.
       The keys of the object must be the days of the week in English (e.g., 'Monday', 'Tuesday').
@@ -27,34 +36,21 @@ module.exports = async (req, res) => {
       4. Ignore any columns or cells that are empty or designated as 'LUNCH'.
       5. The final output must be only the raw JSON object, with no other text, explanations, or markdown formatting like \`\`\`json.
     `;
+    
+    const imageBuffer = Buffer.from(image, 'base64');
+    const imagePart = fileToGenerativePart(imageBuffer, mimeType);
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: timetablePrompt },
-            {
-              type: "image_url",
-              image_url: {
-                "url": `data:${mimeType};base64,${image}`
-              },
-            },
-          ],
-        },
-      ],
-      max_tokens: 2048,
-    });
+    const result = await model.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    const text = response.text();
 
-    const jsonResponse = response.choices[0].message.content;
-    const cleanedText = jsonResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const jsonData = JSON.parse(cleanedText);
     
     res.status(200).json(jsonData);
 
   } catch (error) {
-    console.error("Error processing timetable with OpenAI:", error);
+    console.error("Error processing timetable:", error);
     res.status(500).json({ error: "Failed to analyze timetable.", details: error.message });
   }
 };
