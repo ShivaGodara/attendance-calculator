@@ -277,6 +277,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return classCount;
     };
+    
+    // --- Re-added Missing Helper Function ---
+    const findDateForNthClass = (subjectName, neededClasses) => {
+        if (!settings.endDate || !settings.timetable || !subjectName || neededClasses <= 0) return { date: null, days: Infinity };
+        let classCount = 0, daysCount = 0;
+        const today = new Date();
+        const endDate = new Date(settings.endDate);
+        const holidays = (settings.holidays || []).map(h => new Date(h + 'T00:00:00').toDateString());
+        for (let d = new Date(today); d <= endDate; d.setDate(d.getDate() + 1)) {
+            daysCount++;
+            if (holidays.includes(d.toDateString())) continue;
+            const dayName = d.toLocaleString('en-US', { weekday: 'long' });
+            const classesToday = settings.timetable[dayName] || [];
+            for (const subject of classesToday) {
+                if (subject.toUpperCase() === subjectName.toUpperCase()) classCount++;
+            }
+            if (classCount >= neededClasses) return { date: d, days: daysCount };
+        }
+        return { date: null, days: Infinity };
+    };
+
     const calculateAggregateAttendance = () => {
         let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
         const subjectCards = document.querySelectorAll('.subject-card');
@@ -415,8 +436,6 @@ document.addEventListener('DOMContentLoaded', () => {
         li.appendChild(removeHolidayBtn);
         holidaysList.appendChild(li);
     };
-    
-    // --- UPDATED Analysis and Error Handling ---
     const handleAnalysis = async () => {
         if (!uploadedTimetableFile || !uploadedAttendanceFile) return;
         loadingOverlay.style.display = 'flex';
@@ -424,19 +443,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const timetableData = await analyzeImage(uploadedTimetableFile, '/api/analyze-timetable', 'Timetable');
             settings.timetable = timetableData;
             localStorage.setItem('attendanceSettings', JSON.stringify(settings));
-            
             const attendanceData = await analyzeImage(uploadedAttendanceFile, '/api/analyze-attendance', 'Attendance');
             populateAllCards(attendanceData);
             saveData();
             showResultsPage();
         } catch (error) {
-            alert(error.message); // Show the specific error message
-            console.error("Analysis failed:", error);
+            alert(error.message);
         } finally {
             loadingOverlay.style.display = 'none';
         }
     };
-    
     const analyzeImage = (file, endpoint, type) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -460,7 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.onerror = (error) => reject(new Error("Failed to read the file."));
         });
     };
-    
     const handleTimetableFile = (file) => {
         uploadedTimetableFile = file;
         timetableUploadInput.value = '';
