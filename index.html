@@ -49,10 +49,11 @@
         .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .secondary-btn { background-color: var(--card-bg); color: var(--primary-color); border: 1px solid var(--primary-color); }
         .subject-card, .bunk-card { background-color: var(--card-bg); border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); border-left: 5px solid var(--border-color); }
-        .bunk-card { display: flex; justify-content: space-between; align-items: center; }
-        .bunk-card-subject { font-weight: 600; font-size: 1.1em; }
-        .bunk-card-status { font-weight: 700; font-size: 1.2em; }
-        .subject-card.status-safe, .bunk-card.status-safe { border-left-color: var(--safe-color); }
+        .bunk-card .bunk-card-subject { font-weight: 600; font-size: 1.2em; margin-bottom: 12px; }
+        .bunk-card .bunk-detail { display: flex; justify-content: space-between; align-items: center; font-size: 1em; padding: 8px 0; border-bottom: 1px solid var(--bg-color); }
+        .bunk-card .bunk-detail:last-child { border-bottom: none; }
+        .bunk-card .bunk-detail span { font-weight: 700; }
+        .subject-card.status-safe { border-left-color: var(--safe-color); }
         .subject-card.status-warning { border-left-color: var(--warning-color); }
         .subject-card.status-danger { border-left-color: var(--danger-color); }
         .subject-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; align-items: flex-end; }
@@ -116,12 +117,10 @@
 
         <div id="results-page" class="hidden">
             <header><h1>Your Attendance Analysis</h1></header>
-
             <div class="tabs">
                 <button class="tab-link active" data-tab="analysis">Analysis</button>
                 <button class="tab-link" data-tab="bunk">Bunk Planner</button>
             </div>
-
             <div id="analysis-content" class="tab-content active">
                 <div id="aggregate-summary">
                     <div id="aggregate-percentage">0.00%</div>
@@ -129,9 +128,7 @@
                 </div>
                 <div id="subjects-container"></div>
             </div>
-
             <div id="bunk-content" class="tab-content"></div>
-
             <div class="controls-grid">
                 <button id="start-over-btn" class="control-btn secondary-btn">Start Over</button>
                 <button id="settings-btn" class="control-btn secondary-btn">⚙️ Settings</button>
@@ -239,28 +236,52 @@ document.addEventListener('DOMContentLoaded', () => {
         bunkContainer.innerHTML = '';
         const subjectCards = document.querySelectorAll('.subject-card');
         const goalPercentage = settings.goalPercentage || 75;
+        const aggregateGoalPercentage = settings.aggregateGoalPercentage || 75;
         if (subjectCards.length === 0) {
             bunkContainer.innerHTML = '<p style="text-align:center; color:#606770;">No subjects to plan.</p>';
             return;
         }
 
+        // First, calculate the total aggregate buffer
+        let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
+        subjectCards.forEach(card => {
+            totalAttended += parseInt(card.querySelector('.attended-input').value, 10) || 0;
+            totalHeld += parseInt(card.querySelector('.total-input').value, 10) || 0;
+            totalFutureClasses += countFutureClasses(card.querySelector('.subject-name-input').value);
+        });
+        const aggregateBuffer = Math.floor((totalAttended - (aggregateGoalPercentage / 100) * totalHeld) + totalFutureClasses * (1 - (aggregateGoalPercentage / 100)));
+
+        // Then, display for each subject
         subjectCards.forEach(card => {
             const subjectName = card.querySelector('.subject-name-input').value;
             const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
             const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
             const futureClasses = countFutureClasses(subjectName);
-            const buffer = Math.floor((attended - (goalPercentage / 100) * total) + futureClasses * (1 - (goalPercentage / 100)));
+            const perSubjectBuffer = Math.floor((attended - (goalPercentage / 100) * total) + futureClasses * (1 - (goalPercentage / 100)));
+            
             const bunkCard = document.createElement('div');
-            bunkCard.className = 'bunk-card status-safe';
-            let statusText = '';
+            bunkCard.className = 'bunk-card';
+            
+            const subjectBufferText = (perSubjectBuffer >= 0) 
+                ? `<span style="color: var(--safe-color);">${perSubjectBuffer} hr(s)</span>`
+                : `<span style="color: var(--danger-color);">None</span>`;
+            
+            const aggregateBufferText = (aggregateBuffer >= 0)
+                ? `<span style="color: var(--safe-color);">${aggregateBuffer} hr(s) (from any subject)</span>`
+                : `<span style="color: var(--danger-color);">None</span>`;
 
-            if (buffer >= 0) {
-                statusText = `<span style="color: var(--safe-color);">Can miss ${buffer} hr(s)</span>`;
-            } else {
-                statusText = `<span style="color: var(--danger-color);">Cannot miss any more classes</span>`;
-            }
-
-            bunkCard.innerHTML = `<div class="bunk-card-subject">${subjectName}</div><div class="bunk-card-status">${statusText}</div>`;
+            bunkCard.innerHTML = `
+                <div class="bunk-card-subject">${subjectName}</div>
+                <div class="bunk-card-details">
+                    <div class="bunk-detail">
+                        <span>For Subject Goal (${goalPercentage}%):</span>
+                        <span>${subjectBufferText}</span>
+                    </div>
+                    <div class="bunk-detail">
+                        <span>For Aggregate Goal (${aggregateGoalPercentage}%):</span>
+                        <span>${aggregateBufferText}</span>
+                    </div>
+                </div>`;
             bunkContainer.appendChild(bunkCard);
         });
     };
@@ -282,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return classCount;
     };
+
     const calculateAggregateAttendance = () => {
         let totalAttended = 0, totalHeld = 0, totalFutureClasses = 0;
         const subjectCards = document.querySelectorAll('.subject-card');
@@ -298,8 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentAggregatePercentage = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0;
         let status = '', className = '';
         if (currentAggregatePercentage >= aggregateGoal) {
-            const safeToMiss = Math.floor(totalAttended / (aggregateGoal / 100) - totalHeld);
-            status = `Aggregate goal met. You can miss ${safeToMiss} total class(es).`;
+            status = `Aggregate criteria is met.`;
             className = 'status-safe';
         } else {
             const maxPossibleAttended = totalAttended + totalFutureClasses;
@@ -308,22 +329,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (maxPossiblePercentage < aggregateGoal) {
                 const goalAttended = Math.ceil((aggregateGoal / 100) * maxPossibleTotal);
                 const missedByHrs = goalAttended - maxPossibleAttended;
-                status = `Aggregate impossible. Missed target by ${missedByHrs} total hr(s).`;
+                status = `Impossible. You missed the aggregate goal by ${missedByHrs} hr(s).`;
                 className = 'status-danger';
             } else {
                 const neededHrs = Math.ceil(((aggregateGoal / 100) * totalHeld - totalAttended) / (1 - (aggregateGoal / 100)));
-                status = `Need to attend ${neededHrs} more total hr(s) for aggregate goal.`;
+                status = `${neededHrs} total hours are needed to maintain the aggregate goal.`;
                 className = 'status-warning';
             }
         }
         updateAggregateUI({ percentage: currentAggregatePercentage, status, className });
     };
+
     const updateAggregateUI = (result) => {
         aggregateSummary.className = '';
         if (result.className) aggregateSummary.classList.add(result.className);
         aggregatePercentageDisplay.textContent = `${result.percentage.toFixed(2)}%`;
         aggregateStatusDisplay.textContent = result.status;
     };
+
     const calculateAttendance = (card) => {
         const attended = parseInt(card.querySelector('.attended-input').value, 10) || 0;
         const total = parseInt(card.querySelector('.total-input').value, 10) || 0;
@@ -336,8 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentPercentage = (attended / total) * 100;
         let status = '', className = '';
         if (currentPercentage >= goalPercentage) {
-            const safeToMiss = Math.floor(attended / (goalPercentage / 100) - total);
-            status = `You can miss ${safeToMiss} more class(es).`;
+            status = `Per-subject goal met.`;
             className = 'status-safe';
         } else {
             const futureClasses = countFutureClasses(subjectName);
@@ -351,7 +373,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 className = 'status-danger';
             } else {
                 const neededHrs = Math.ceil(((goalPercentage / 100) * total - attended) / (1 - (goalPercentage / 100)));
-                status = `Need to attend ${neededHrs} more hr(s).`;
+                const projection = findDateForNthClass(subjectName, neededHrs);
+                const formattedDate = projection.date ? projection.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+                status = `${neededHrs} more hrs needed. <br>Goal reached in ~${projection.days} days (${formattedDate})`;
                 className = 'status-warning';
             }
         }
@@ -359,6 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveData();
         calculateAggregateAttendance();
     };
+
     const updateCardUI = (card, result) => {
         card.className = 'subject-card';
         if (result.className) card.classList.add(result.className);
@@ -400,8 +425,6 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsModal.style.display = 'none';
         document.querySelectorAll('.subject-card').forEach(calculateAttendance);
         calculateAggregateAttendance();
-
-        // --- THE FIX: Recalculate Bunk Planner if it's the active tab ---
         if (document.querySelector('.tab-link[data-tab="bunk"]').classList.contains('active')) {
             calculateBunkPlanner();
         }
@@ -483,8 +506,10 @@ document.addEventListener('DOMContentLoaded', () => {
         tab.addEventListener('click', () => {
             tabs.forEach(item => item.classList.remove('active'));
             tab.classList.add('active');
-            tabContents.forEach(content => content.classList.remove('active'));
-            document.getElementById(tab.dataset.tab + '-content').classList.add('active');
+            const targetId = tab.dataset.tab + '-content';
+            tabContents.forEach(content => {
+                content.classList.toggle('active', content.id === targetId);
+            });
             if (tab.dataset.tab === 'bunk') {
                 calculateBunkPlanner();
             }
